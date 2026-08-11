@@ -1,4 +1,14 @@
 version: 2
+
+# The npm updater needs to authenticate to GitHub Packages to resolve @sethbacon/*
+# dependencies. Set the repository Dependabot secret SUITE_READ_TOKEN (a token with
+# read:packages) — an Actions secret of the same name is NOT visible to Dependabot.
+registries:
+  npm-github-packages:
+    type: npm-registry
+    url: https://npm.pkg.github.com
+    token: ${{secrets.SUITE_READ_TOKEN}}
+
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -9,6 +19,8 @@ updates:
 
   - package-ecosystem: npm
     directory: /
+    registries:
+      - npm-github-packages
     schedule:
       interval: weekly
     commit-message:

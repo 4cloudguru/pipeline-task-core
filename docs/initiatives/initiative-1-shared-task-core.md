@@ -159,125 +159,53 @@ HTML, ServiceNow query injection, a bespoke proxy-tunnelling HTTP client — tha
 
 ---
 
-## 5. Tying into security-orchestration and the remediation ledger
+## 5. Security-orchestration and the remediation ledger
 
-Both new repos onboard into the existing audit/remediation apparatus **from the first commit**, not
-after they ship. The framework already has a precedent for each of them, and — more importantly — it
-has a blind spot that this initiative would otherwise walk straight into.
+Both new repos onboard into the estate's existing audit and remediation apparatus **from the first
+commit**, not after they ship. Two things follow from that, and they shape the work below:
 
-### What the apparatus is
+- **`pipeline-task-core` becomes the *fix location*.** The remediation runbook's rule is that if a
+  defect is expressible in the shared module it is fixed in the shared module — a consumer-side guard
+  is a mitigation, not the fix — and that the module fix is *inert until every consumer bumps*. The
+  package inherits exactly the discipline `terraform-suite-identity` and `terraform-suite-ui` already
+  carry, including the consumer-pin check that keeps a remediation batch open until every consumer is
+  bumped or explicitly deferred.
+- **Thirteen defect classes already apply to an ADO extension.** For `azure-pipelines-release-docs`
+  they are a pre-existing, machine-checkable specification to satisfy *before* the first release,
+  rather than findings to discover in the first audit.
 
-Two repos, split by role:
+### What that means for how we write the code
 
-| Repo                     | Role                                                                                                                                                                                                                                                                      |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `security-orchestration` | The blind audit engine — `engine/blind-audit-engine.js` (1,506 lines), one profile-driven script covering 8 targets. Recon → research → triage → 10 domain reviewers → adversarial verify panel → disposition → score vs baseline.                                        |
-| `so-wt-ledger`           | The remediation half — `remediation/signatures/` (17 structural scanners), `remediation/replay/` (Python replay harness), `signatures/ledger.json` (17 closed-out entries), `signatures/registry.json` (signature → invocation), `replay/scope.json` (the repo registry). |
-
-A **defect class** is a machine-checkable structural scanner, not a prose category. Each enumerates
-*every* instance of its class across the estate, so a fix cannot land on the one site named in an
-issue and miss five others.
-
-### The blind spot — read this before extracting anything
-
-`registry.json` declares which repo kinds each signature runs against. The complete set of kinds any
-signature targets today is **`ado-extension`, `go-backend`, `gomod`**. There is **no `npm`**.
-
-Of the 17 classes, **13 apply to `ado-extension`**:
-
-| Class                       | Ledger | Lands in core?                                                                      |
-| --------------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `egress-authorization`      | #161   | **yes** — and it is already a *regression* (closed 2026-07-25, reopened 2026-08-06) |
-| `network-retry`             | #879   | **yes**                                                                             |
-| `hardened-temp-writes`      | #881   | **yes**                                                                             |
-| `premask-emission`          | #185   | **yes**                                                                             |
-| `output-boundary`           | #101   | **yes**                                                                             |
-| `capture-output-protection` | #869   | **yes**                                                                             |
-| `artifact-trust`            | #65    | **yes** (the `./gpg` entrypoint)                                                    |
-| `proxy-parity`              | #196   | **yes**                                                                             |
-| `prototype-safe-lookup`     | #884   | **yes**                                                                             |
-| `credential-input-type`     | #867   | no — `task.json` input types, extension-side                                        |
-| `provider-auth-failclosed`  | #97    | no — extension-side                                                                 |
-| `docs-claims`               | #205   | no — repo discipline                                                                |
-| `enforced-disciplines`      | #192   | no — repo discipline                                                                |
-
-Nine of those thirteen describe code this initiative **moves out of `ado-extension` scope and into an
-`npm` module that no signature currently looks at.** Extract without acting and the replay goes green
-because it stopped looking, not because anything was fixed. `suite-ui` already demonstrates the hole:
-it is registered in `scope.json` as `kind: npm` and has zero applicable signatures.
-
-**Therefore: adding `"npm"` to `appliesToKinds` for those nine classes is not follow-up work — it
-ships in the same PR as the extraction.** Treat it as an exit criterion for Phase 4, and note that
-`egress-authorization` has already regressed once, so it earns the most care.
-
-### Registering the two repos
-
-`replay/scope.json` is the registry. `suite-ui` is the exact structural precedent for the package —
-same kind, same shape:
-
-```json
-{ "name": "suite-ui", "dir": "terraform-suite-ui", "gh": "sethbacon/terraform-suite-ui",
-  "kind": "npm", "manifest": "package.json",
-  "modulePath": "@sethbacon/terraform-suite-ui",
-  "consumers": ["registry-frontend", "tsm-frontend"] }
-```
-
-- **`pipeline-task-core`** → `sharedModules[]`, `kind: "npm"`, `modulePath: "@sethbacon/pipeline-task-core"`,
-  `consumers: ["terraform-ext", "packer-ext", "release-docs-ext"]`.
-- **`azure-pipelines-release-docs`** → `suite[]`, `kind: "ado-extension"`, `consumes: ["pipeline-task-core"]`.
-- The two existing extensions gain `consumes: ["pipeline-task-core"]` at Phase 4.
-
-That last change also retires a comment in `scope.json` that currently states the problem this
-initiative exists to solve:
-
-> The two `ado-extension` repos are SIBLING Azure DevOps extensions that copy modules between each
-> other … They consume no versioned shared module, so they carry no `consumes` entry and no
-> `sharedModules` record: the parity is copy-paste, which is exactly why every signature has to run
-> in BOTH.
-
-Separately, each repo needs an engine profile in `PROFILES` (`blind-audit-engine.js`) plus a baseline
-file. Model the package on `suite-ui` (`kind: 'lib'`) and the extension on `packer-ext`. Note the
-engine's `repoPath`/`baselineFile` values are **Linux paths** (`/home/sethbacon/Repos/terraform/…`) —
-it runs under WSL, not the Windows checkout.
-
-### What "TDD with security in mind" means here
-
-The ledger already encodes the discipline; the new repos adopt it rather than inventing one. Three
-fields carry it, and the division of labour between them is the point — quoting entry #879:
+The apparatus separates two kinds of proof, and the separation is the whole point: a **signature**
+proves site coverage (every instance of a defect class across the estate), while a **class test**
+proves behaviour. Neither substitutes for the other. Quoting one ledger entry directly:
 
 > It claims nothing about retry CORRECTNESS (budget, backoff, jitter, partial-file safety, which
 > errors are classified retryable) — all of that is the class test's job.
 
-1. **`scope`** — an explicit statement of what a green entry does *and does not* claim. Written first,
-   it is the contract the tests are held to.
-2. **`classTest`** — the named test proving *behaviour*. The established shape is two tables: **Table A**
-   drives the behaviour (transient failure then success; an egress rejection that must *not* be
-   retried; a retry that must not resume into a prior attempt's partial bytes), **Table B** hand-verdicts
-   every site in the repo. The signature proves site coverage; the class test proves conduct.
-3. **`mutationBySite`** — red/green proof the test actually detects the defect. From #161: deleting the
-   RFC 6598 CIDR "turned exactly 3 rows red … and restoring it returned 68 passing." A test that
-   passes against the buggy code is worthless, and the ledger refuses to take it on trust.
+So for every module in the Phase 0.2 inventory, in this order:
 
-`blindVerify` is recorded honestly as `NOT RUN` where it was not run. Keep that habit.
+1. **Write the `scope` statement first** — what a green result does *and does not* claim. It is the
+   contract the tests are then held to.
+2. **Write the class test before the implementation**, in the established two-table shape: Table A
+   drives behaviour (transient failure then success; an egress rejection that must *not* be retried; a
+   retry that must not resume into a prior attempt's partial bytes), Table B hand-verdicts every call
+   site.
+3. **Record a mutation that reddens it.** A test that passes against the buggy code is worthless, and
+   the ledger refuses to take it on trust.
 
-**Concretely, for every module in Phase 0.2:** write the class test before the implementation, in the
-two-table shape; record a mutation that reddens it; write the `scope` paragraph stating the limits of
-the claim. `pipeline-task-core` then becomes the *fix location* the remediation runbook already
-mandates:
+Port `Tests/EgressAuthorizationL0.ts` and `Tests/NetworkRetryClassL0.ts` as the reference behaviour, so
+the package *inherits* the existing ledger entries rather than restating them. Where a verification
+step is skipped, record it as not-run rather than implying it passed.
 
-> if the defect is expressible in the shared module, it is fixed in the shared module. A consumer-side
-> guard is a mitigation, not the fix. The module fix is **inert until every consumer bumps**.
+### The rest of this section lives elsewhere
 
-That last clause is why `consumers[]` in `scope.json` matters: it drives the pin check
-(`replay/replaylib/pins.py`) that keeps a batch open until every consumer is bumped or explicitly
-deferred. The package inherits exactly the discipline `suite-identity` and `suite-ui` already carry.
+The concrete onboarding work — engine profiles, the scope registry, and a signature-coverage gap the
+extraction would otherwise walk into — is recorded in the private `security-orchestration` repository
+at `docs/onboarding-pipeline-task-core.md`. It is held there because it enumerates where automated
+coverage is currently blind, against repositories that are public.
 
-For `azure-pipelines-release-docs` the implication is blunter: **all 13 `ado-extension` classes apply
-to it on day one.** They are a pre-existing, machine-checkable specification — satisfy them before the
-first release rather than discovering them in the first audit. Adopt Packer's in-repo halves of those
-gates too (`check-egress-authorization.js`, `check-artifact-trust.js`, `check-proxy-parity.js`,
-`check-docs-claims.js`, `check-enforced-disciplines.js`).
-
+**It contains a blocking Phase 4 gate.** Read it before any extraction PR merges.
 ---
 
 ## Phase 0 — `@sethbacon/pipeline-task-core`
@@ -372,9 +300,9 @@ inherits ledger entries #161 and #879 rather than restating them.
 `0.1.0` published to GitHub Packages, signed, SBOM-attested, installable by a scratch task project on
 both Node 20 and Node 24.
 
-Plus, from §5 — the package is registered in `replay/scope.json` under `sharedModules[]` with its
-`consumers[]` list, it has an engine profile and a seeded baseline, and every module carries a class
-test with a recorded mutation.
+Plus, from §5 — the package is registered with the estate's audit and remediation apparatus,
+including its consumer list, it has an engine profile and a seeded baseline, and every module carries
+a class test with a recorded mutation. The registration steps are in the private onboarding doc.
 
 ---
 
@@ -448,10 +376,10 @@ publish → cut the templates over → mark the originals deprecated.
 This is where packer #46, terraform #300, #681 and #407 are closed (see §4) — on the PRs that remove
 the duplication, not on the one that publishes the package.
 
-**Blocking exit criterion (§5):** the same PR that moves a primitive into core must add `"npm"` to
-that class's `appliesToKinds` in `signatures/registry.json`, and add `consumes: ["pipeline-task-core"]`
-to the repo's `scope.json` entry. Nine classes are affected. Skip this and the signature replay goes
-green because it stopped looking — `egress-authorization` (#161) has already regressed once.
+**Blocking exit criterion (§5):** moving a primitive out of an extension also moves it out of the
+scope the estate's structural scanners currently cover. Each extraction PR must carry the matching
+coverage change, or the checks pass for the wrong reason. The specifics are in the private onboarding
+doc — **read it before the first extraction PR merges.**
 
 Order: **Packer first** (fewer copies, and it holds the three diverged modules), then Terraform (where
 the seven-task `retry.ts` family collapses into a dependency).

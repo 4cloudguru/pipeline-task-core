@@ -17,3 +17,16 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # Major TypeScript bumps break the toolchain before any of our code:
+      # tsup's bundled rollup-plugin-dts crashes against TS7's changed
+      # internals (2026-07-13 estate incident, same failure as the frontends).
+      # Revisit once tsup ships a TS7-compatible rollup-plugin-dts.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # @types/node must track the Node FLOOR (20), not the newest runtime.
+      # On @types/node 26 the compiler would accept APIs absent from Node 20
+      # and the Node20_1 fallback handler would fail only at runtime, on an
+      # agent — the CI matrix catches that only if a test exercises the API.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]

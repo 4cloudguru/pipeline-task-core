@@ -1,0 +1,203 @@
+name: Publish package
+
+# Publishes @4cloudguru/pipeline-task-core to the public npm registry when a
+# GitHub Release is published (tag the release vX.Y.Z to match package.json).
+#
+# workflow_dispatch exists only to re-run a publish against an EXISTING tagged
+# release (e.g. a transient registry failure) — the tag-match step below refuses
+# to publish unless the checked-out ref is exactly `v<package.json version>`, so
+# a manual run against an arbitrary branch cannot bypass the tagged-release flow.
+"on":
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# Serialise publishes so two runs cannot race the same version to the registry.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Unprivileged build: runs the full untrusted dependency lifecycle in a job holding NO
+  # registry/OIDC/attestation permissions, so a poisoned transitive dependency cannot reach
+  # the publish token, mint an OIDC token, or forge attestations. Emits the exact tarball.
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tarball: ${{ steps.pack.outputs.tarball }}
+    steps:
+      # audit, not block: this job runs npm ci/build/test, so its egress footprint is not
+      # stable enough to allowlist. It holds no secrets; the privileged job below blocks.
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history so the ancestry check below can walk back to origin/main.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          scope: "@4cloudguru"
+          package-manager-cache: false
+
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF}" != "refs/tags/${PKG_VERSION}" ]; then
+            echo "::error::GITHUB_REF (${GITHUB_REF}) does not match package.json version (${PKG_VERSION}). Refusing to publish an untagged ref."
+            exit 1
+          fi
+          echo "Publishing ${PKG_VERSION} from ${GITHUB_REF} — OK"
+
+      # In-repo half of the release-integrity control; the human gate is the required-reviewer
+      # rule on the "release" environment. This only proves the commit did not bypass main.
+      - name: Verify release tag is reachable from main
+        run: |
+          git fetch --no-tags --quiet origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::The checked-out commit is not reachable from main. Refusing to publish a release cut from an unmerged ref."
+            exit 1
+          fi
+
+      # --ignore-scripts: the build (tsup) and tests need no install scripts, so disabling
+      # them shrinks the untrusted-code surface even in this unprivileged job.
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      # Re-run at publish time so a dispatch re-publish of an older tag cannot ship without a
+      # fresh advisory/signature check.
+      - run: npm audit --audit-level=moderate
+      - run: npm audit signatures
+
+      - name: Assert the CJS entrypoint is really CommonJS
+        # ADO task hosts are CJS; an ESM-only build would only fail on an agent at runtime.
+        run: node -e "const c=require('./dist/index.cjs'); if(typeof c.parseRetryAfterMs!=='function'){throw new Error('CJS entrypoint did not export parseRetryAfterMs')}"
+
+      - name: Verify the publish tarball contains exactly dist + docs (no more, no fewer)
+        run: |
+          npm pack --dry-run --json > /tmp/pack.json
+          node -e "
+            const { readdirSync } = require('node:fs');
+            const pkg = require('/tmp/pack.json')[0];
+            const actual = pkg.files.map((f) => f.path).sort();
+            const distFiles = readdirSync('dist', { recursive: true }).map((f) => 'dist/' + f);
+            const expected = ['LICENSE', 'README.md', 'package.json', ...distFiles].sort();
+            const missing = expected.filter((p) => !actual.includes(p));
+            const unexpected = actual.filter((p) => !expected.includes(p));
+            if (missing.length) console.error('::error::Missing expected file(s) from the publish tarball: ' + missing.join(', '));
+            if (unexpected.length) console.error('::error::Unexpected file(s) would be published: ' + unexpected.join(', '));
+            if (missing.length || unexpected.length) process.exit(1);
+          "
+
+      # Pack once so the published bytes and every attestation bind to the same digest.
+      # Validate the filename before it becomes a cross-job output.
+      - name: Pack tarball
+        id: pack
+        run: |
+          TARBALL=$(npm pack --silent | tail -n1)
+          if ! [[ "$TARBALL" =~ ^4cloudguru-pipeline-task-core-[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?\.tgz$ ]]; then
+            echo "::error::npm pack produced an unexpected filename, refusing to publish it: $TARBALL"
+            exit 1
+          fi
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      # Content check, not just paths: the bytes inside the tarball must be exactly the dist/
+      # this job built, so a pack-time mutation cannot swap file contents undetected.
+      # TARBALL flows in via env:, never template-expanded into the script body.
+      - name: Verify tarball contents match the built dist byte-for-byte
+        run: |
+          mkdir -p /tmp/tarball-verify
+          tar -xzf "$TARBALL" -C /tmp/tarball-verify
+          diff -r /tmp/tarball-verify/package/dist dist
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload publish artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: publish-artifacts
+          path: |
+            ${{ steps.pack.outputs.tarball }}
+            sbom.cyclonedx.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # Minimal privileged job: downloads only the vetted artifacts and publishes + attests them.
+  # Holds the registry/OIDC/attestation permissions but runs no dependency code.
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # A deployment tag policy on the "release" environment restricts this to v* tags; the
+    # environment reference also scopes NPM_TOKEN to this job alone.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # npm provenance + actions/attest-*
+      attestations: write
+    steps:
+      # block, not audit: this job installs nothing, so its egress is fixed and known —
+      # allowlist it, since this is the job holding the credentials worth exfiltrating.
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            *.actions.githubusercontent.com:443
+            api.github.com:443
+            fulcio.sigstore.dev:443
+            github.com:443
+            registry.npmjs.org:443
+            rekor.sigstore.dev:443
+            tuf-repo-cdn.sigstore.dev:443
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          scope: "@4cloudguru"
+          package-manager-cache: false
+
+      - name: Download publish artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: publish-artifacts
+
+      # provenance comes from publishConfig.provenance in package.json, which requires the
+      # id-token: write permission above. TARBALL flows in via env:, never expanded inline.
+      - run: npm publish "$TARBALL"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TARBALL: ${{ needs.build.outputs.tarball }}
+
+      # Attest the exact tarball just published, so provenance binds to the bytes consumers
+      # install rather than a re-derived copy.
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: ${{ needs.build.outputs.tarball }}
+
+      - name: Attest SBOM for the published tarball
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: ${{ needs.build.outputs.tarball }}
+          sbom-path: sbom.cyclonedx.json

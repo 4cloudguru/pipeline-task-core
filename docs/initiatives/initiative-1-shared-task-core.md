@@ -83,13 +83,13 @@ Two related observations from the same survey:
 
 ## 3. Proposed names
 
-| Thing          | Proposal                                   | Notes                                                      |
-| -------------- | ------------------------------------------ | ---------------------------------------------------------- |
-| Shared repo    | `4cloudguru/pipeline-task-core`            | Neutral; serves all three extensions                       |
-| Package        | `@4cloudguru/pipeline-task-core`           | Public npmjs, published with provenance                    |
-| Extension repo | `azure-pipelines-release-docs`             | Matches `azure-pipelines-{terraform,packer}`               |
-| Extension id   | `pipeline-tasks-release-docs`              | Matches `pipeline-tasks-terraform`                         |
-| Extension name | Pipeline Tasks for Release & Documentation |                                                            |
+| Thing          | Proposal                                   | Notes                                        |
+| -------------- | ------------------------------------------ | -------------------------------------------- |
+| Shared repo    | `4cloudguru/pipeline-task-core`            | Neutral; serves all three extensions         |
+| Package        | `@4cloudguru/pipeline-task-core`           | Public npmjs, published with provenance      |
+| Extension repo | `azure-pipelines-release-docs`             | Matches `azure-pipelines-{terraform,packer}` |
+| Extension id   | `pipeline-tasks-release-docs`              | Matches `pipeline-tasks-terraform`           |
+| Extension name | Pipeline Tasks for Release & Documentation |                                              |
 
 ---
 

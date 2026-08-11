@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "@sethbacon/pipeline-task-core",
+      "package-name": "@4cloudguru/pipeline-task-core",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "draft": false,

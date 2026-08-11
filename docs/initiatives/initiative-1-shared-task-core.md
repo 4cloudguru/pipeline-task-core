@@ -85,8 +85,8 @@ Two related observations from the same survey:
 
 | Thing          | Proposal                                   | Notes                                                      |
 | -------------- | ------------------------------------------ | ---------------------------------------------------------- |
-| Shared repo    | `pipeline-task-core`                       | Neutral; serves all three extensions                       |
-| Package        | `@sethbacon/pipeline-task-core`            | GitHub Packages, mirroring `@sethbacon/terraform-suite-ui` |
+| Shared repo    | `4cloudguru/pipeline-task-core`            | Neutral; serves all three extensions                       |
+| Package        | `@4cloudguru/pipeline-task-core`           | Public npmjs, published with provenance                    |
 | Extension repo | `azure-pipelines-release-docs`             | Matches `azure-pipelines-{terraform,packer}`               |
 | Extension id   | `pipeline-tasks-release-docs`              | Matches `pipeline-tasks-terraform`                         |
 | Extension name | Pipeline Tasks for Release & Documentation |                                                            |
@@ -494,6 +494,27 @@ for the same treatment.
 
 ## Risks
 
+- **`@sethbacon` on npmjs belongs to someone else.** The estate publishes `@sethbacon/*` to GitHub
+  Packages, but that scope on the public registry is a third party's. Anything that resolves an
+  `@sethbacon/*` name against the default registry gets *their* namespace — textbook dependency
+  confusion.
+
+  The estate is well defended in CI today, and it is worth being precise about why: every consumer
+  runs `npm ci` against a committed lockfile whose entry pins both the host and the content —
+
+  ```json
+  "resolved": "https://npm.pkg.github.com/download/@sethbacon/terraform-suite-ui/0.8.1/aa5fef1d…",
+  "integrity": "sha512-MK7or+K2nbecCByRi9ojt7kTfPdjxIIEfiELbrZM7MxDbe2tMRgh5lAj7Q9Ms4tOjuwxcw9KVrYHKau1OLFyUQ=="
+  ```
+
+  A substituted package fails on both the host and the hash. The `.npmrc` scope pin
+  (`@sethbacon:registry=https://npm.pkg.github.com`) is the second layer.
+
+  The residual window is **fresh resolution** rather than `npm ci`: adding or bumping the dependency,
+  or a developer running `npm install` somewhere the repo `.npmrc` is not in scope. Narrow, but it is
+  the exposure that does not close until the scope is one the estate owns. This package should
+  therefore never publish under `@sethbacon/*` — it has no consumers yet, so it costs nothing to
+  avoid.
 - **RFC 6125 wildcard change is a behaviour change.** Existing Terraform allowlists relying on the
   loose suffix match will start rejecting hosts. Audit values before cutover; consider a one-release
   warning mode.
@@ -609,7 +630,24 @@ through. Adopting it is a strict improvement, not merely a signature change.
 
 ## Still genuinely open
 
-Nothing blocking. Two items deferred by choice:
+Nothing blocking. Three items deferred by choice:
+
+- **Registry and scope: decided 2026-08-11 — `@4cloudguru/pipeline-task-core` on public npmjs, with
+  provenance.** Taken before `0.1.0` deliberately: `cloud-suite-ui` (formerly `terraform-suite-ui`)
+  has 16 published versions on GitHub Packages, so its move to the new org is a migration — this
+  package had published nothing, so it was a free choice. Three reasons:
+
+  1. **It dissolves the private-registry credential chain.** No Dependabot `registries:` block, no
+     `SUITE_READ_TOKEN`, no `read:packages` scope, and no `.npmrc` token at `.vsix` packaging time —
+     one fewer credential in every consumer's release path.
+  2. **npm provenance.** `npm publish --provenance` via GitHub OIDC publishes a verifiable link from
+     package → commit → workflow. GitHub Packages has no public equivalent. For a package whose whole
+     purpose is security primitives, that is what lets a consumer check the artifact matches the
+     audited source, and it matches the cosign/SBOM posture the extensions already have.
+  3. **`@sethbacon` on npmjs belongs to a third party** and cannot be claimed. See the risk above.
+
+  `publishConfig` therefore carries `access: public` (scoped packages default to restricted, so
+  publish would otherwise fail) and `provenance: true`.
 
 - Whether `terraform-suite-httpsafe` and `terraform-suite-mailer` (Finding 2) split before or after
   the Phase 0 package ships. They are independent tracks; sequencing is a capacity question.

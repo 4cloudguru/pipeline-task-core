@@ -1,15 +1,17 @@
 {
-  "name": "@sethbacon/pipeline-task-core",
+  "name": "@4cloudguru/pipeline-task-core",
   "version": "0.0.0",
   "description": "Shared HTTP, retry, egress and redaction primitives for the Azure Pipelines task extensions.",
   "license": "Apache-2.0",
   "private": false,
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sethbacon/pipeline-task-core.git"
+    "url": "git+https://github.com/4cloudguru/pipeline-task-core.git"
   },
   "engines": {
     "node": ">=20.0.0"

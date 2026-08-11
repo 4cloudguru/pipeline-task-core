@@ -1,6 +1,6 @@
 # pipeline-task-core
 
-`@sethbacon/pipeline-task-core` — shared, versioned security primitives (HTTP client, retry, egress
+`@4cloudguru/pipeline-task-core` — shared, versioned security primitives (HTTP client, retry, egress
 allowlisting, URL secret redaction, proxy configuration) consumed by every Azure DevOps pipeline-task
 extension in the estate:
 
@@ -24,20 +24,20 @@ dependency.
 
 ## Constraints that shaped the build
 
-These differ deliberately from `@sethbacon/terraform-suite-ui`, which is a browser/React package:
+These differ deliberately from `cloud-suite-ui`, which is a browser/React package:
 
-| Constraint           | Value           | Why                                                                                         |
-| -------------------- | --------------- | ------------------------------------------------------------------------------------------- |
-| Module format        | dual CJS + ESM  | ADO tasks are CommonJS and use `import tl = require(...)`. CI asserts `require()` resolves. |
-| Node floor           | 20              | Every task declares a `Node20_1` fallback handler for agents without the Node 24 runner.    |
-| Runtime dependencies | none            | `openpgp` is an *optional peer*, reachable only via the `./gpg` subpath.                    |
-| Registry             | GitHub Packages | Mirrors the rest of the estate.                                                             |
+| Constraint           | Value                          | Why                                                                                         |
+| -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
+| Module format        | dual CJS + ESM                 | ADO tasks are CommonJS and use `import tl = require(...)`. CI asserts `require()` resolves. |
+| Node floor           | 20                             | Every task declares a `Node20_1` fallback handler for agents without the Node 24 runner.    |
+| Runtime dependencies | none                           | `openpgp` is an *optional peer*, reachable only via the `./gpg` subpath.                    |
+| Registry             | public npmjs, with provenance  | No consumer needs a token to install, and `--provenance` publishes a verifiable package → commit → workflow link. |
 
 ## Entrypoints
 
 ```ts
-import { parseRetryAfterMs } from '@sethbacon/pipeline-task-core'
-import type { VerifyDetached } from '@sethbacon/pipeline-task-core/gpg'
+import { parseRetryAfterMs } from '@4cloudguru/pipeline-task-core'
+import type { VerifyDetached } from '@4cloudguru/pipeline-task-core/gpg'
 ```
 
 `./gpg` is separate so tasks that never verify release signatures do not vendor `openpgp` into their

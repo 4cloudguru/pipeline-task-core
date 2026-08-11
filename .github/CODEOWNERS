@@ -1,0 +1,10 @@
+# Every file needs owner review; there is currently one maintainer.
+* @sethbacon
+
+# Supply-chain surfaces — called out explicitly so a change here is never
+# swept along in a large diff.
+/.github/         @sethbacon
+/package.json     @sethbacon
+/.npmrc           @sethbacon
+/tsup.config.ts   @sethbacon
+/src/gpg/         @sethbacon

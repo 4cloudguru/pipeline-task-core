@@ -1,0 +1,74 @@
+{
+  "name": "@sethbacon/pipeline-task-core",
+  "version": "0.0.0",
+  "description": "Shared HTTP, retry, egress and redaction primitives for the Azure Pipelines task extensions.",
+  "license": "Apache-2.0",
+  "private": false,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sethbacon/pipeline-task-core.git"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./gpg": {
+      "require": {
+        "types": "./dist/gpg/index.d.ts",
+        "default": "./dist/gpg/index.cjs"
+      },
+      "import": {
+        "types": "./dist/gpg/index.d.mts",
+        "default": "./dist/gpg/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "commitlint": "commitlint"
+  },
+  "peerDependencies": {
+    "openpgp": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "openpgp": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@types/node": "^20.19.0",
+    "@vitest/coverage-v8": "^4.1.7",
+    "openpgp": "^6.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.7"
+  }
+}

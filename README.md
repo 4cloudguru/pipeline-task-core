@@ -26,12 +26,12 @@ dependency.
 
 These differ deliberately from `cloud-suite-ui`, which is a browser/React package:
 
-| Constraint           | Value                          | Why                                                                                         |
-| -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
-| Module format        | dual CJS + ESM                 | ADO tasks are CommonJS and use `import tl = require(...)`. CI asserts `require()` resolves. |
-| Node floor           | 20                             | Every task declares a `Node20_1` fallback handler for agents without the Node 24 runner.    |
-| Runtime dependencies | none                           | `openpgp` is an *optional peer*, reachable only via the `./gpg` subpath.                    |
-| Registry             | public npmjs, with provenance  | No consumer needs a token to install, and `--provenance` publishes a verifiable package → commit → workflow link. |
+| Constraint           | Value                         | Why                                                                                                               |
+| -------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Module format        | dual CJS + ESM                | ADO tasks are CommonJS and use `import tl = require(...)`. CI asserts `require()` resolves.                       |
+| Node floor           | 20                            | Every task declares a `Node20_1` fallback handler for agents without the Node 24 runner.                          |
+| Runtime dependencies | none                          | `openpgp` is an *optional peer*, reachable only via the `./gpg` subpath.                                          |
+| Registry             | public npmjs, with provenance | No consumer needs a token to install, and `--provenance` publishes a verifiable package → commit → workflow link. |
 
 ## Entrypoints
 

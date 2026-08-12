@@ -95,6 +95,14 @@ jobs:
         run: node -e "const c=require('./dist/index.cjs'); if(typeof c.parseRetryAfterMs!=='function'){throw new Error('CJS entrypoint did not export parseRetryAfterMs')}"
       - name: Assert the ESM entrypoint loads
         run: node --input-type=module -e "import('./dist/index.js').then(m=>{if(typeof m.parseRetryAfterMs!=='function'){throw new Error('ESM entrypoint did not export parseRetryAfterMs')}})"
+      - name: Assert the root entrypoint does not pull in openpgp
+        # The ./gpg subpath exists so a task that never verifies release
+        # signatures does not vendor openpgp into its .vsix. A stray re-export
+        # from the root would undo that silently, and only show up as bundle
+        # size in a downstream repo.
+        run: node -e "const fs=require('fs');for(const f of ['dist/index.cjs','dist/index.js']){if(fs.readFileSync(f,'utf8').includes('openpgp')){throw new Error(f+' references openpgp: the ./gpg subpath split is broken')}}"
+      - name: Assert the gpg subpath does expose the verifier
+        run: node -e "const g=require('./dist/gpg/index.cjs'); if(typeof g.verifyDetached!=='function'){throw new Error('gpg subpath did not export verifyDetached')}"
 
   audit:
     name: Dependency audit

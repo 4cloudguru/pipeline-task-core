@@ -242,17 +242,34 @@ those two choices.** This package is consumed by ADO task hosts:
 with `openpgp` as an optional peer — it is copied three times today. `hashicorp-gpg-key` stays in the
 consuming repos. See decision 4.
 
-### 0.3 Three design conflicts needing a decision
+### 0.3 Three design conflicts — all now decided
 
-1. **Redirect strictness.** Terraform permits `github.com` → `*.githubusercontent.com`; Packer is
-   strict same-host. *Recommendation:* default strict, export a `githubAssetRedirects` predicate
-   callers opt into. Secure-by-default, no capability lost.
-2. **Wildcard semantics.** Terraform's suffix match silently widens `*.s3.amazonaws.com` to
-   `a.bucket.s3.amazonaws.com`; Packer enforces RFC 6125 single-label. *Recommendation:* adopt
-   Packer's. This is a behaviour change for Terraform allowlists — call it out in release notes and
-   audit existing allowlist values before cutover.
-3. **Backoff.** Decorrelated jitter (Terraform) vs plain exponential (Packer). *Recommendation:*
-   jitter by default with an injectable entropy source so tests stay deterministic.
+Audited 2026-08-11 against the real implementations and every allowlist value in both repos.
+
+1. **Redirect strictness — DECIDED: strict by default, opt-in predicate.** The evidence turns this
+   from a preference into a requirement. Terraform's installers fetch verification material from
+   GitHub (OpenTofu `SHA256SUMS`, OPA `.sha256`, terraform-docs `.sha256sum`), and GitHub answers a
+   release-asset URL with a 302 onto `*.githubusercontent.com` — so a strict same-host rule fails
+   every one of those **closed**. Packer downloads only from `releases.hashicorp.com` and needs no
+   such exception; its own header comment already records the absence as a known divergence. So the
+   package defaults to same-host and exports the GitHub predicate for the consumers that genuinely
+   need it. Neither family loses anything, and neither inherits the other's exception silently.
+
+2. **Wildcard semantics — DECIDED: RFC 6125 single-label, with a diagnosable failure.** The audit
+   found **both `registryAllowedHosts` and `mirrorAllowedHosts` default to `""` in every task in both
+   repos**, so no deployment is affected by default. The only wildcard values that exist anywhere are
+   documentation examples: `*.s3.amazonaws.com` (both repos) and `*.blob.core.windows.net`
+   (Terraform). Ordinary buckets — `mybucket.s3.amazonaws.com` — match identically under either rule.
+
+   The narrow real difference is a *dotted* bucket name: `app-prod.data.s3.amazonaws.com` is a legal
+   S3 virtual-host style URL that loose-suffix accepts and single-label rejects. That is a genuine, if
+   rare, tightening, and it is the reason for the second half of this decision: **when a host fails
+   single-label matching but *would* have matched a loose suffix, say so explicitly in the error.**
+   An operator who hits it then gets an actionable message naming the cause, rather than an opaque
+   refusal — which is what makes the tightening safe to ship.
+
+3. **Backoff — DECIDED and SHIPPED.** Decorrelated jitter with an injectable entropy source, in
+   `src/retry/retry.ts`. Ported from the seven byte-identical copies rather than reimplemented.
 
 ### 0.4 Security posture for this repo
 

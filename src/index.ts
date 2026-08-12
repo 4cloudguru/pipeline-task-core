@@ -12,3 +12,17 @@
 export { RETRY_AFTER_CAP_MS, parseRetryAfterMs } from './retry/retry-after'
 export { retryAsync } from './retry/retry'
 export type { RetryController, RetryOutcome } from './retry/retry'
+export {
+  assertEgressHostAllowed,
+  bareHost,
+  isHostAllowed,
+  isIpLiteral,
+  isPrivateIpv4Address,
+  isPrivateOrLinkLocalHost,
+  looseSuffixOnlyMatch,
+  parseAllowedHosts,
+  parseIpv4,
+  parseIpv6,
+  resolvesToPrivateOrLinkLocalAddress,
+} from './egress/egress'
+export type { EgressHostMessages } from './egress/egress'

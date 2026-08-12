@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.1.1...v0.1.2) (2026-08-12)
+
+
+### Bug Fixes
+
+* clear the four scanner findings ([#9](https://github.com/4cloudguru/pipeline-task-core/issues/9)) ([6bfe9ce](https://github.com/4cloudguru/pipeline-task-core/commit/6bfe9ceccba2b8c535591a4a22845471accce6c6))
+
 ## [0.1.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.1.0...v0.1.1) (2026-08-12)
 
 

@@ -7,6 +7,10 @@ updates:
       interval: weekly
     commit-message:
       prefix: deps
+    # Don't adopt a release the moment it lands; a compromised version is most
+    # dangerous in its first hours, before anyone has looked at it.
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: npm
     directory: /
@@ -30,3 +34,5 @@ updates:
       # agent — the CI matrix catches that only if a test exercises the API.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+    cooldown:
+      default-days: 7

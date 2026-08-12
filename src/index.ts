@@ -57,3 +57,9 @@ export {
 export { validateUrlPathSegment } from './url/path-segment'
 export { resolveProxy } from './proxy/proxy'
 export type { AgentProxyConfiguration, ResolvedProxy } from './proxy/proxy'
+export {
+  VerificationFailure,
+  discardArtifactOnFailure,
+  isVerificationFailure,
+} from './verification/verification'
+export type { DiscardOptions } from './verification/verification'

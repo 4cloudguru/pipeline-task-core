@@ -55,3 +55,5 @@ export {
   stripControlCharacters,
 } from './url/redaction'
 export { validateUrlPathSegment } from './url/path-segment'
+export { resolveProxy } from './proxy/proxy'
+export type { AgentProxyConfiguration, ResolvedProxy } from './proxy/proxy'

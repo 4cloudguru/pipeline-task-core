@@ -89,10 +89,14 @@ jobs:
         run: |
           npm pack --dry-run --json > /tmp/pack.json
           node -e "
-            const { readdirSync } = require('node:fs');
+            const { readdirSync, statSync } = require('node:fs');
+            const { sep } = require('node:path');
             const pkg = require('/tmp/pack.json')[0];
             const actual = pkg.files.map((f) => f.path).sort();
-            const distFiles = readdirSync('dist', { recursive: true }).map((f) => 'dist/' + f);
+            // recursive readdir yields directories too; the tarball lists only files.
+            const distFiles = readdirSync('dist', { recursive: true })
+              .map((f) => 'dist/' + String(f).split(sep).join('/'))
+              .filter((p) => statSync(p).isFile());
             const expected = ['LICENSE', 'README.md', 'package.json', ...distFiles].sort();
             const missing = expected.filter((p) => !actual.includes(p));
             const unexpected = actual.filter((p) => !expected.includes(p));

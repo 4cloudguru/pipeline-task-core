@@ -46,3 +46,12 @@ export type {
   HttpMessages,
   RedirectPolicy,
 } from './http/http'
+export {
+  extractUrlTokenSecrets,
+  extractUrlUserInfoSecrets,
+  redactUrl,
+  redactUrlUserInfo,
+  scrubSecretsFromMessage,
+  stripControlCharacters,
+} from './url/redaction'
+export { validateUrlPathSegment } from './url/path-segment'

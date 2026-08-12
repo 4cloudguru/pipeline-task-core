@@ -50,6 +50,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\" \"*.mts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.mts\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -74,6 +76,7 @@
     "@types/node": "^20.19.0",
     "@vitest/coverage-v8": "^4.1.7",
     "openpgp": "^6.3.1",
+    "prettier": "3.9.6",
     "tsup": "^8.3.5",
     "typescript": "^5.9.3",
     "vitest": "^4.1.7"

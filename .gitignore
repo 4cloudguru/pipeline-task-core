@@ -9,6 +9,9 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+# Shared so the editor's built-in TS formatter cannot reflow files against the
+# committed Prettier style on save.
+!.vscode/settings.json
 
 # Local secrets and personal overrides — never commit
 .env

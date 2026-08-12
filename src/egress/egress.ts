@@ -27,8 +27,8 @@ function assertValidAllowlistEntry(entry: string): string {
   if (!valid) {
     throw new Error(
       `Invalid allowed-hosts entry '${entry}'. Expected a hostname such as ` +
-      `'registry.example.com', an IP literal, or a single-label wildcard covering ` +
-      `at least two labels such as '*.s3.amazonaws.com'.`,
+        `'registry.example.com', an IP literal, or a single-label wildcard covering ` +
+        `at least two labels such as '*.s3.amazonaws.com'.`,
     )
   }
 
@@ -78,15 +78,10 @@ export function isHostAllowed(hostname: string, allowedHosts: string[]): boolean
  * bucket, say). Naming the near-miss turns an opaque refusal into an actionable
  * one; it never widens the decision.
  */
-export function looseSuffixOnlyMatch(
-  hostname: string,
-  allowedHosts: string[],
-): string | undefined {
+export function looseSuffixOnlyMatch(hostname: string, allowedHosts: string[]): string | undefined {
   if (isHostAllowed(hostname, allowedHosts)) return undefined
   const host = hostname.toLowerCase()
-  return allowedHosts.find(
-    (allowed) => allowed.startsWith('*.') && host.endsWith(allowed.slice(1)),
-  )
+  return allowedHosts.find((allowed) => allowed.startsWith('*.') && host.endsWith(allowed.slice(1)))
 }
 
 /**
@@ -179,9 +174,7 @@ export function parseIpv6(host: string): number[] | null {
   if (doubleColon !== host.lastIndexOf('::')) return null
 
   const [headText, tailText] =
-    doubleColon >= 0
-      ? [host.slice(0, doubleColon), host.slice(doubleColon + 2)]
-      : [host, null]
+    doubleColon >= 0 ? [host.slice(0, doubleColon), host.slice(doubleColon + 2)] : [host, null]
 
   const expand = (text: string, allowEmbeddedIpv4: boolean): number[] | null => {
     if (text === '') return []
@@ -236,7 +229,7 @@ export function isPrivateIpv4Address(address: number): boolean {
     // `&` coerces to int32, so re-normalise before comparing: 172.16.0.0/12 and
     // 169.254.0.0/16 both have the high bit set and would otherwise compare as
     // negative against a positive network.
-    return (((address >>> 0) & mask) >>> 0) === network
+    return ((address >>> 0) & mask) >>> 0 === network
   })
 }
 
@@ -263,7 +256,7 @@ function embeddedIpv4(groups: number[]): number | null {
   ) {
     return low32 // 64:ff9b::/96 NAT64
   }
-  if (groups[0] === 0x2002) return ((groups[1]! * 0x10000) + groups[2]!) >>> 0 // 2002::/16 6to4
+  if (groups[0] === 0x2002) return (groups[1]! * 0x10000 + groups[2]!) >>> 0 // 2002::/16 6to4
   return null
 }
 
@@ -366,7 +359,7 @@ export async function assertEgressHostAllowed(
       const nearMiss = looseSuffixOnlyMatch(hostname, allowedHosts)
       const hint = nearMiss
         ? ` Note: '${nearMiss}' matches exactly one label (RFC 6125 wildcard semantics), so it does` +
-        ` not cover the additional label(s) in '${hostname}'. Pin the host explicitly if it is intended.`
+          ` not cover the additional label(s) in '${hostname}'. Pin the host explicitly if it is intended.`
         : ''
       throw new Error(messages.notAllowed(hostname, allowedHosts.join(', ')) + hint)
     }

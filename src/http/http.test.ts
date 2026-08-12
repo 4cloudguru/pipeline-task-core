@@ -89,7 +89,10 @@ describe('http — scheme pinning', () => {
 describe('http — redirect handling', () => {
   it('follows exactly MAX_REDIRECTS hops', async () => {
     const script = [
-      ...Array.from({ length: MAX_REDIRECTS }, (_, i) => () => redirect(`https://a.example/${i + 1}`)),
+      ...Array.from(
+        { length: MAX_REDIRECTS },
+        (_, i) => () => redirect(`https://a.example/${i + 1}`),
+      ),
       () => ok('arrived'),
     ]
     const { fetchImpl } = scriptedFetch(script)
@@ -101,8 +104,9 @@ describe('http — redirect handling', () => {
     // The chain ENDS in a success. A budget loosened by one would reach it, so
     // this pins the boundary rather than just "an endless chain eventually stops".
     const script = [
-      ...Array.from({ length: MAX_REDIRECTS + 1 }, (_, i) => () =>
-        redirect(`https://a.example/${i + 1}`),
+      ...Array.from(
+        { length: MAX_REDIRECTS + 1 },
+        (_, i) => () => redirect(`https://a.example/${i + 1}`),
       ),
       () => ok('should never be reached'),
     ]
@@ -179,7 +183,12 @@ describe('http — githubAssetRedirects (opt-in)', () => {
     ['www.github.com', 'https://objects.githubusercontent.com/a', true, 'www origin'],
     ['github.com', 'http://objects.githubusercontent.com/a', false, 'no protocol downgrade'],
     ['evil.test', 'https://objects.githubusercontent.com/a', false, 'origin must be github.com'],
-    ['github.com.evil.test', 'https://objects.githubusercontent.com/a', false, 'origin suffix-extension'],
+    [
+      'github.com.evil.test',
+      'https://objects.githubusercontent.com/a',
+      false,
+      'origin suffix-extension',
+    ],
     ['github.com', 'https://githubusercontent.com.evil.test/a', false, 'target suffix-extension'],
     ['github.com', 'https://evilgithubusercontent.com/a', false, 'target needs the separating dot'],
     ['github.com', 'https://elsewhere.test/a', false, 'unrelated target'],
@@ -205,9 +214,9 @@ describe('http — githubAssetRedirects (opt-in)', () => {
       redirectPolicy: anyRedirectPolicy(sameHostOnly, githubAssetRedirects),
       ...FAST,
     })
-    await expect(
-      client.fetchText('https://github.com/o/r/releases/download/v1/f'),
-    ).resolves.toBe('SHA256SUMS')
+    await expect(client.fetchText('https://github.com/o/r/releases/download/v1/f')).resolves.toBe(
+      'SHA256SUMS',
+    )
   })
 })
 
@@ -224,9 +233,12 @@ describe('http — anyRedirectPolicy', () => {
     [[no, no], false, 'all deny'],
     [[no, asyncYes], true, 'async policies are awaited'],
   ])('%#: %s (%s)', async (policies, expected) => {
-    expect(await anyRedirectPolicy(...(policies as RedirectPolicy[]))('a.example', new URL('https://b.example'))).toBe(
-      expected,
-    )
+    expect(
+      await anyRedirectPolicy(...(policies as RedirectPolicy[]))(
+        'a.example',
+        new URL('https://b.example'),
+      ),
+    ).toBe(expected)
   })
 })
 
@@ -396,23 +408,23 @@ describe('http — fetchJson', () => {
 })
 
 describe('http — allow404 variants', () => {
-  it.each([
-    ['fetchTextAllow404' as const],
-    ['fetchBufferAllow404' as const],
-  ])('%s returns null on 404 rather than throwing', async (method) => {
-    const { fetchImpl } = scriptedFetch([() => status(404)])
-    const client = createHttpClient({ fetchImpl, ...FAST })
-    await expect(client[method]('https://a.example/x')).resolves.toBeNull()
-  })
+  it.each([['fetchTextAllow404' as const], ['fetchBufferAllow404' as const]])(
+    '%s returns null on 404 rather than throwing',
+    async (method) => {
+      const { fetchImpl } = scriptedFetch([() => status(404)])
+      const client = createHttpClient({ fetchImpl, ...FAST })
+      await expect(client[method]('https://a.example/x')).resolves.toBeNull()
+    },
+  )
 
-  it.each([
-    ['fetchTextAllow404' as const],
-    ['fetchBufferAllow404' as const],
-  ])('%s still throws on a 500', async (method) => {
-    const { fetchImpl } = scriptedFetch([() => status(500)])
-    const client = createHttpClient({ fetchImpl, ...FAST })
-    await expect(client[method]('https://a.example/x')).rejects.toThrow(/HTTP 500/)
-  })
+  it.each([['fetchTextAllow404' as const], ['fetchBufferAllow404' as const]])(
+    '%s still throws on a 500',
+    async (method) => {
+      const { fetchImpl } = scriptedFetch([() => status(500)])
+      const client = createHttpClient({ fetchImpl, ...FAST })
+      await expect(client[method]('https://a.example/x')).rejects.toThrow(/HTTP 500/)
+    },
+  )
 
   it('fetchBuffer returns the bytes', async () => {
     const { fetchImpl } = scriptedFetch([() => ok('bytes')])
@@ -519,7 +531,10 @@ describe('http — downloadToFile', () => {
   })
 
   it('refuses a hop the allowlist rejects, even when the first host passed', async () => {
-    const { fetchImpl } = scriptedFetch([() => redirect('https://evil.test/f'), () => ok('payload')])
+    const { fetchImpl } = scriptedFetch([
+      () => redirect('https://evil.test/f'),
+      () => ok('payload'),
+    ])
     const client = createHttpClient({ fetchImpl, ...FAST })
     await expect(
       client.downloadToFile('https://a.example/f', dest, 1000, (h) => {

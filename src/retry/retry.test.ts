@@ -32,26 +32,25 @@ describe('Table A — retryAsync behaviour', () => {
   })
 
   it('retries a transient failure and then succeeds', async () => {
-    const call = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('transient'))
-      .mockResolvedValue('ok')
+    const call = vi.fn().mockRejectedValueOnce(new Error('transient')).mockResolvedValue('ok')
     await expect(retryAsync(call, { baseDelayMs: 0, maxBackoffMs: 0 })).resolves.toBe('ok')
     expect(call).toHaveBeenCalledTimes(2)
   })
 
   it('gives up after `retries` and rethrows the final error', async () => {
     const call = vi.fn().mockRejectedValue(new Error('always'))
-    await expect(retryAsync(call, { retries: 2, baseDelayMs: 0, maxBackoffMs: 0 })).rejects.toThrow('always')
+    await expect(retryAsync(call, { retries: 2, baseDelayMs: 0, maxBackoffMs: 0 })).rejects.toThrow(
+      'always',
+    )
     // retries + 1 total attempts
     expect(call).toHaveBeenCalledTimes(3)
   })
 
   it('does NOT retry an error the predicate calls terminal', async () => {
     const call = vi.fn().mockRejectedValue(new Error('egress rejected'))
-    await expect(
-      retryAsync(call, { baseDelayMs: 0, retryError: () => false }),
-    ).rejects.toThrow('egress rejected')
+    await expect(retryAsync(call, { baseDelayMs: 0, retryError: () => false })).rejects.toThrow(
+      'egress rejected',
+    )
     expect(call).toHaveBeenCalledTimes(1)
   })
 
@@ -128,14 +127,20 @@ describe('Table A — retryAsync behaviour', () => {
   it('does not invoke onRetry on the final give-up', async () => {
     const onRetry = vi.fn()
     const call = vi.fn().mockRejectedValue(new Error('x'))
-    await expect(retryAsync(call, { retries: 2, baseDelayMs: 0, maxBackoffMs: 0, onRetry })).rejects.toThrow()
+    await expect(
+      retryAsync(call, { retries: 2, baseDelayMs: 0, maxBackoffMs: 0, onRetry }),
+    ).rejects.toThrow()
     // 3 attempts, but only the 2 retries are announced.
     expect(onRetry).toHaveBeenCalledTimes(2)
   })
 
   it('reports which outcome triggered the retry', async () => {
     const outcomes: string[] = []
-    const call = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(429).mockResolvedValue(200)
+    const call = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(429)
+      .mockResolvedValue(200)
     await retryAsync(call, {
       baseDelayMs: 0,
       maxBackoffMs: 0,
@@ -153,7 +158,9 @@ describe('Table A — parseRetryAfterMs caps a hostile server', () => {
 
   it('caps an HTTP-date far in the future', () => {
     const now = Date.parse('2026-08-11T12:00:00Z')
-    expect(parseRetryAfterMs('Wed, 12 Aug 2026 12:00:00 GMT', RETRY_AFTER_CAP_MS, now)).toBe(RETRY_AFTER_CAP_MS)
+    expect(parseRetryAfterMs('Wed, 12 Aug 2026 12:00:00 GMT', RETRY_AFTER_CAP_MS, now)).toBe(
+      RETRY_AFTER_CAP_MS,
+    )
   })
 })
 

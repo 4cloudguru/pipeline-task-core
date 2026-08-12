@@ -180,7 +180,9 @@ describe('Table A — allowlist entries that cannot mean what was intended are r
 describe('Table A — assertEgressHostAllowed is the single decision point', () => {
   it('enforces only the pin when an allowlist is set, even for a private host', async () => {
     // An air-gapped mirror on a private address is legitimate when pinned.
-    await expect(assertEgressHostAllowed('10.0.0.5', ['10.0.0.5'], messages)).resolves.toBeUndefined()
+    await expect(
+      assertEgressHostAllowed('10.0.0.5', ['10.0.0.5'], messages),
+    ).resolves.toBeUndefined()
   })
 
   it('refuses a host outside the pin', async () => {
@@ -196,21 +198,23 @@ describe('Table A — assertEgressHostAllowed is the single decision point', () 
   })
 
   it('default-denies a private literal when no allowlist is set', async () => {
-    await expect(assertEgressHostAllowed('169.254.169.254', [], messages)).rejects.toThrow(/is private/)
+    await expect(assertEgressHostAllowed('169.254.169.254', [], messages)).rejects.toThrow(
+      /is private/,
+    )
   })
 
   it('default-denies a NAME that resolves to a private address', async () => {
     const lookup = async () => [{ address: '169.254.169.254' }]
-    await expect(assertEgressHostAllowed('metadata.example.com', [], messages, lookup)).rejects.toThrow(
-      /is private/,
-    )
+    await expect(
+      assertEgressHostAllowed('metadata.example.com', [], messages, lookup),
+    ).rejects.toThrow(/is private/)
   })
 
   it('refuses when ANY resolved address is private, not just the first', async () => {
     const lookup = async () => [{ address: '93.184.216.34' }, { address: '10.0.0.5' }]
-    await expect(assertEgressHostAllowed('mixed.example.com', [], messages, lookup)).rejects.toThrow(
-      /is private/,
-    )
+    await expect(
+      assertEgressHostAllowed('mixed.example.com', [], messages, lookup),
+    ).rejects.toThrow(/is private/)
   })
 
   it('permits a public name that resolves publicly', async () => {
@@ -234,9 +238,9 @@ describe('Table A — assertEgressHostAllowed is the single decision point', () 
     const lookup = async () => {
       throw new Error('ENOTFOUND')
     }
-    await expect(
-      assertEgressHostAllowed('nope.example.com', [], messages, lookup),
-    ).rejects.toThrow('ENOTFOUND')
+    await expect(assertEgressHostAllowed('nope.example.com', [], messages, lookup)).rejects.toThrow(
+      'ENOTFOUND',
+    )
   })
 })
 
@@ -292,7 +296,8 @@ describe('Table A — parser edge cases', () => {
  */
 describe('Table B — exported surface is fully accounted for', () => {
   const VERDICTS: Record<string, string> = {
-    parseAllowedHosts: 'validates and normalises operator input; throws on an entry that cannot match',
+    parseAllowedHosts:
+      'validates and normalises operator input; throws on an entry that cannot match',
     isHostAllowed: 'pure match; RFC 6125 single-label wildcards',
     looseSuffixOnlyMatch: 'diagnostic only; never widens a decision',
     bareHost: 'strips port/brackets/zone so numeric checks cannot be bypassed',

@@ -70,7 +70,9 @@ export function isRetryableHttpStatus(status: number): boolean {
 
 /** The capped Retry-After delay from a 429; undefined for any other status or an absent/invalid header. */
 export function retryAfterMsFromResponse(response: Response): number | undefined {
-  return response.status === 429 ? parseRetryAfterMs(response.headers.get('retry-after')) : undefined
+  return response.status === 429
+    ? parseRetryAfterMs(response.headers.get('retry-after'))
+    : undefined
 }
 
 /** Decides whether a redirect hop may be followed. Receives the ORIGINAL host, not the previous hop's. */

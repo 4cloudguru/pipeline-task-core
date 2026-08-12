@@ -31,7 +31,11 @@ describe('url/redaction — sensitive query parameters', () => {
     ['https://s.blob.core.windows.net/c/b?sig=ABC123', ['ABC123'], 'Azure SAS sig'],
     ['https://s.blob.core.windows.net/c/b?SIG=ABC123', ['ABC123'], 'case-insensitive'],
     ['https://s3.amazonaws.com/b/k?X-Amz-Signature=DEAD', ['DEAD'], 'AWS signature'],
-    ['https://s3.amazonaws.com/b/k?X-Amz-Credential=AKIA%2F1', ['AKIA%2F1', 'AKIA/1'], 'AWS credential, both forms'],
+    [
+      'https://s3.amazonaws.com/b/k?X-Amz-Credential=AKIA%2F1',
+      ['AKIA%2F1', 'AKIA/1'],
+      'AWS credential, both forms',
+    ],
     ['https://s3.amazonaws.com/b/k?X-Amz-Security-Token=TOK', ['TOK'], 'AWS session token'],
     ['https://storage.googleapis.com/b/o?X-Goog-Signature=SIG', ['SIG'], 'GCS signature'],
     ['https://storage.googleapis.com/b/o?X-Goog-Credential=CRED', ['CRED'], 'GCS credential'],
@@ -99,9 +103,11 @@ describe('url/redaction — scrubSecretsFromMessage', () => {
   })
 
   it('scrubs the token even when the URL was transformed by something downstream', () => {
-    const out = scrubSecretsFromMessage('tool-lib logged sig=XXX partially', 'https://h/p?sig=XXX', [
-      'XXX',
-    ])
+    const out = scrubSecretsFromMessage(
+      'tool-lib logged sig=XXX partially',
+      'https://h/p?sig=XXX',
+      ['XXX'],
+    )
     expect(out).toBe('tool-lib logged sig=<redacted> partially')
   })
 

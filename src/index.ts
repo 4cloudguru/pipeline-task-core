@@ -1,5 +1,5 @@
 /**
- * `@sethbacon/pipeline-task-core`
+ * `@4cloudguru/pipeline-task-core`
  *
  * Shared HTTP, retry, egress and redaction primitives for the Azure Pipelines
  * task extensions. The module inventory and the design decisions behind it are
@@ -26,3 +26,23 @@ export {
   resolvesToPrivateOrLinkLocalAddress,
 } from './egress/egress'
 export type { EgressHostMessages } from './egress/egress'
+export {
+  DOWNLOAD_TIMEOUT_MS,
+  HttpError,
+  MAX_REDIRECTS,
+  MAX_RESPONSE_BYTES,
+  METADATA_TIMEOUT_MS,
+  anyRedirectPolicy,
+  createHttpClient,
+  githubAssetRedirects,
+  isRetryableHttpStatus,
+  retryAfterMsFromResponse,
+  sameHostOnly,
+} from './http/http'
+export type {
+  AuthorizeHost,
+  HttpClient,
+  HttpClientOptions,
+  HttpMessages,
+  RedirectPolicy,
+} from './http/http'

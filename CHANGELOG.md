@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.1.0...v0.1.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **ci:** tarball check must ignore directories, not just files ([c7191fc](https://github.com/4cloudguru/pipeline-task-core/commit/c7191fc0c0ffbecf7cb9bed91a9c00e2e6bd9c25))
+
 ## 0.1.0 (2026-08-11)
 
 

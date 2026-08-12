@@ -1,8 +1,11 @@
 ---
 name: PR Checks
 
+# pull_request, not pull_request_target: neither job needs a write token or a
+# secret on a fork PR, so there is nothing to gain from running privileged
+# against untrusted code — which is what pull_request_target does.
 "on":
-  pull_request_target:
+  pull_request:
     types: [opened, edited, synchronize, reopened]
 
 permissions:
@@ -46,14 +49,9 @@ jobs:
       - uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
         with:
           egress-policy: audit
-      # pull_request_target runs against the base ref by default; check out the
-      # PR head explicitly and never persist credentials alongside it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
-          base-ref: ${{ github.event.pull_request.base.sha }}
-          head-ref: ${{ github.event.pull_request.head.sha }}

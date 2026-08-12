@@ -9,4 +9,6 @@
  * not verify HashiCorp release signatures never pull in `openpgp`.
  */
 
-export { DEFAULT_RETRY_AFTER_CAP_MS, parseRetryAfterMs } from './retry/retry-after'
+export { RETRY_AFTER_CAP_MS, parseRetryAfterMs } from './retry/retry-after'
+export { retryAsync } from './retry/retry'
+export type { RetryController, RetryOutcome } from './retry/retry'

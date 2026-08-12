@@ -10,7 +10,7 @@
  */
 export function parseRetryAfterMs(
   value: string | null | undefined,
-  capMs: number = DEFAULT_RETRY_AFTER_CAP_MS,
+  capMs: number = RETRY_AFTER_CAP_MS,
   now: number = Date.now(),
 ): number | undefined {
   if (value == null) return undefined
@@ -34,8 +34,8 @@ export function parseRetryAfterMs(
   return clamp(delta, capMs)
 }
 
-/** Default ceiling applied to any server-supplied `Retry-After`. */
-export const DEFAULT_RETRY_AFTER_CAP_MS = 30_000
+/** Ceiling applied to any server-supplied `Retry-After`, and the default backoff ceiling. */
+export const RETRY_AFTER_CAP_MS = 30_000
 
 function clamp(ms: number, capMs: number): number {
   const ceiling = capMs > 0 ? capMs : 0

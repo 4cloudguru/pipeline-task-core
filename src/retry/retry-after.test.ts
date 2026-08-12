@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_RETRY_AFTER_CAP_MS, parseRetryAfterMs } from './retry-after'
+import { RETRY_AFTER_CAP_MS, parseRetryAfterMs } from './retry-after'
 
 const NOW = Date.parse('2026-08-11T12:00:00Z')
 
@@ -36,7 +36,7 @@ describe('parseRetryAfterMs', () => {
   })
 
   it('clamps to the cap so an origin cannot park the agent', () => {
-    expect(parseRetryAfterMs('86400')).toBe(DEFAULT_RETRY_AFTER_CAP_MS)
+    expect(parseRetryAfterMs('86400')).toBe(RETRY_AFTER_CAP_MS)
     expect(parseRetryAfterMs('600', 1_000)).toBe(1_000)
     expect(parseRetryAfterMs('Wed, 12 Aug 2026 12:00:00 GMT', 30_000, NOW)).toBe(30_000)
   })

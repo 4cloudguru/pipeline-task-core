@@ -100,9 +100,11 @@ jobs:
         # signatures does not vendor openpgp into its .vsix. A stray re-export
         # from the root would undo that silently, and only show up as bundle
         # size in a downstream repo.
-        run: node -e "const fs=require('fs');for(const f of ['dist/index.cjs','dist/index.js']){if(fs.readFileSync(f,'utf8').includes('openpgp')){throw new Error(f+' references openpgp: the ./gpg subpath split is broken')}}"
+        run: |
+          node -e "const fs=require('fs');for(const f of ['dist/index.cjs','dist/index.js']){if(fs.readFileSync(f,'utf8').includes('openpgp')){throw new Error(f+' references openpgp, so the gpg subpath split is broken')}}"
       - name: Assert the gpg subpath does expose the verifier
-        run: node -e "const g=require('./dist/gpg/index.cjs'); if(typeof g.verifyDetached!=='function'){throw new Error('gpg subpath did not export verifyDetached')}"
+        run: |
+          node -e "const g=require('./dist/gpg/index.cjs'); if(typeof g.verifyDetached!=='function'){throw new Error('gpg subpath did not export verifyDetached')}"
 
   audit:
     name: Dependency audit
@@ -120,6 +122,30 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm audit --omit=dev --audit-level=high
+
+  actionlint:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        shell: bash
+        # Downloads the release asset and verifies it against actionlint's own
+        # published SHA256 before extracting, rather than the convenience
+        # install script, which pipes curl straight into tar with no integrity
+        # check. Matches the sibling repos' verify-before-extract convention.
+        run: |
+          set -euo pipefail
+          curl -sSfLO https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint_1.7.12_linux_amd64.tar.gz" | sha256sum -c -
+          tar xzf actionlint_1.7.12_linux_amd64.tar.gz actionlint
+      - name: Run actionlint
+        run: ./actionlint -color
 
   zizmor:
     name: Scan Workflows (zizmor)

@@ -186,11 +186,27 @@ jobs:
         with:
           name: publish-artifacts
 
-      # provenance comes from publishConfig.provenance in package.json, which requires the
-      # id-token: write permission above. TARBALL flows in via env:, never expanded inline.
+      # Trusted publishing exchanges the job's OIDC token for a short-lived
+      # registry credential, so there is no NODE_AUTH_TOKEN here. It needs npm
+      # >= 11.5.1; without this the failure is a bare ENEEDAUTH that reads like
+      # a missing secret rather than a too-old client.
+      - name: Verify npm supports trusted publishing
+        run: |
+          NPM_VERSION=$(npm --version)
+          echo "npm ${NPM_VERSION}"
+          MIN=11.5.1
+          if [ "$(printf '%s\n%s\n' "$MIN" "$NPM_VERSION" | sort -V | head -n1)" != "$MIN" ]; then
+            echo "::error::npm ${NPM_VERSION} is older than ${MIN} and cannot use trusted publishing (OIDC). Pin a newer Node/npm on this runner."
+            exit 1
+          fi
+
+      # No NODE_AUTH_TOKEN: the registry credential is minted from the OIDC
+      # identity of this workflow, which npmjs matches against the package's
+      # configured trusted publisher. Provenance comes from
+      # publishConfig.provenance plus the id-token permission above. TARBALL
+      # flows in via env:, never expanded inline.
       - run: npm publish "$TARBALL"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TARBALL: ${{ needs.build.outputs.tarball }}
 
       # Attest the exact tarball just published, so provenance binds to the bytes consumers

@@ -159,6 +159,46 @@ describe('gpg — a signature that must not verify', () => {
   })
 })
 
+describe('gpg — why it did not verify', () => {
+  // "It did not verify" does not distinguish a key-rotation miss from a tampered
+  // file. A caller building the operator-facing error should not have to discard
+  // what the library already knew.
+  it('reports a reason for each rejected signature', async () => {
+    const signature = await detachedSignature(CONTENT, [untrusted])
+    const result = await verifyDetached({
+      message: CONTENT,
+      signature,
+      armoredPublicKeys: [trusted.armoredPublic],
+    })
+    expect(result.verified).toBe(false)
+    expect(result.reasons).toBeDefined()
+    expect(result.reasons).toHaveLength(1)
+    expect(result.reasons?.[0]).toBeTruthy()
+  })
+
+  it('reports one reason per candidate when several are rejected', async () => {
+    const signature = await detachedSignature(CONTENT, [rotated, untrusted])
+    const result = await verifyDetached({
+      message: CONTENT,
+      signature,
+      armoredPublicKeys: [trusted.armoredPublic],
+    })
+    expect(result.verified).toBe(false)
+    expect(result.reasons).toHaveLength(2)
+  })
+
+  it('omits reasons entirely when verification SUCCEEDED', async () => {
+    const signature = await detachedSignature(CONTENT, [trusted])
+    const result = await verifyDetached({
+      message: CONTENT,
+      signature,
+      armoredPublicKeys: [trusted.armoredPublic],
+    })
+    expect(result.verified).toBe(true)
+    expect(result.reasons).toBeUndefined()
+  })
+})
+
 describe('gpg — multi-signature files', () => {
   it('accepts a valid signature at a NON-ZERO index', async () => {
     // A rotation window produces a .sig carrying both the old and new

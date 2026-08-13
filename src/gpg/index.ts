@@ -34,6 +34,16 @@ export interface VerifyDetachedResult {
   readonly verified: boolean
   /** Key ID that verified, when one did. */
   readonly keyId?: string
+  /**
+   * Why each candidate signature was rejected, when none verified.
+   *
+   * Present only on failure, and only when the library gave a reason. A bad
+   * signature is the outcome an operator most needs to diagnose, and "it did not
+   * verify" does not distinguish a key-rotation miss from a tampered file — so a
+   * caller building an operator-facing error is not forced to discard what the
+   * library already knew.
+   */
+  readonly reasons?: readonly string[]
 }
 
 export type VerifyDetached = (request: VerifyDetachedRequest) => Promise<VerifyDetachedResult>
@@ -91,7 +101,13 @@ export async function verifyDetached(
   const outcomes = await Promise.allSettled(result.signatures.map((entry) => entry.verified))
   const index = outcomes.findIndex((outcome) => outcome.status === 'fulfilled')
   if (index === -1) {
-    return { verified: false }
+    const reasons = outcomes
+      .filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
+      .map((outcome) =>
+        outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
+      )
+      .filter((reason) => reason.length > 0)
+    return reasons.length === 0 ? { verified: false } : { verified: false, reasons }
   }
 
   const keyId = result.signatures[index]?.keyID.toHex()

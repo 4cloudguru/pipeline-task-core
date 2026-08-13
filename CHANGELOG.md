@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.3.1...v0.4.0) (2026-08-13)
+
+
+### Features
+
+* **http:** add fetchStatusText so status-plus-body reads honour the byte cap ([#26](https://github.com/4cloudguru/pipeline-task-core/issues/26)) ([daf89e9](https://github.com/4cloudguru/pipeline-task-core/commit/daf89e909bc056a709bb57663004b8029f55a010))
+
 ## [0.3.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.3.0...v0.3.1) (2026-08-13)
 
 

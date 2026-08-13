@@ -106,6 +106,27 @@ jobs:
         run: |
           node -e "const g=require('./dist/gpg/index.cjs'); if(typeof g.verifyDetached!=='function'){throw new Error('gpg subpath did not export verifyDetached')}"
 
+  smoke:
+    name: Consumer smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Packs the tarball and consumes it from a throwaway project built exactly
+      # the way an ADO task is, so the `exports`/`typesVersions` resolution that
+      # the Build job's by-path assertions cannot reach is covered. See the
+      # header of scripts/consumer-smoke.mjs for the bug that motivated it.
+      - run: npm run smoke
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest

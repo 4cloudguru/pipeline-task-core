@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.3.0...v0.3.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **packaging:** make the ./gpg subpath types resolvable for CJS consumers ([#23](https://github.com/4cloudguru/pipeline-task-core/issues/23)) ([4a76caa](https://github.com/4cloudguru/pipeline-task-core/commit/4a76caaf7062bdbd9de98a26d09d367184719242))
+
 ## [0.3.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.2.0...v0.3.0) (2026-08-13)
 
 

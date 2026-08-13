@@ -32,6 +32,38 @@ export function stripControlCharacters(value: string): string {
   return value.replace(/[\u0000-\u001F\u007F]/g, '')
 }
 
+/**
+ * Characters of a remote response echoed into a failure message by default.
+ * Enough to identify a registry's error payload, far short of letting a peer
+ * choose the size of the consumer's log.
+ */
+export const LOG_EXCERPT_CHARS = 512
+
+/**
+ * Makes a remote-controlled string safe to interpolate into an error message,
+ * a job log line or a CI annotation.
+ *
+ * Two independent problems, both present wherever a response body was pasted
+ * straight into a thrown `Error`:
+ *
+ * 1. UNBOUNDED LENGTH. The body is chosen by whatever host the operator's URL
+ *    names, so without a cap the peer decides how much of the consumer's log
+ *    and annotation surface it occupies — enough volume buries the real error.
+ * 2. CONTROL CHARACTERS. GitHub's `core.setFailed` percent-encodes only `%`,
+ *    CR and LF, and Azure Pipelines' logging commands are line-oriented too, so
+ *    every other C0 character survives into the rendered annotation.
+ *
+ * Stripping runs BEFORE truncating so the retained count is of characters that
+ * will actually be displayed, and so a control character cannot ride in on the
+ * boundary. The elision marker states how much was dropped, so a reader can
+ * tell a short body from a truncated one.
+ */
+export function truncateForLog(value: string, maxChars: number = LOG_EXCERPT_CHARS): string {
+  const safeValue = stripControlCharacters(value)
+  if (safeValue.length <= maxChars) return safeValue
+  return `${safeValue.slice(0, maxChars)}… (${safeValue.length - maxChars} more characters truncated)`
+}
+
 function isSensitiveQueryParam(name: string): boolean {
   const lower = name.toLowerCase()
   return (

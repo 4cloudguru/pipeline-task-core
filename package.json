@@ -42,6 +42,13 @@
     },
     "./package.json": "./package.json"
   },
+  "typesVersions": {
+    "*": {
+      "gpg": [
+        "./dist/gpg/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],

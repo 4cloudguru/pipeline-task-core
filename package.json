@@ -57,9 +57,10 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.ts\" \"*.mts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"*.mts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"scripts/**/*.mjs\" \"*.mts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"scripts/**/*.mjs\" \"*.mts\"",
     "test": "vitest run",
+    "smoke": "node scripts/consumer-smoke.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "commitlint": "commitlint"

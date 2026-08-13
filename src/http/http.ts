@@ -147,6 +147,12 @@ export interface HttpClientOptions {
 /** Authorizes a host before it is contacted. THROWS to refuse, so the message can name the host and the allowlist. */
 export type AuthorizeHost = (host: string) => void | Promise<void>
 
+/** A completed exchange whose status the caller interprets itself. See {@link HttpClient.fetchStatusText}. */
+export interface HttpStatusText {
+  status: number
+  body: string
+}
+
 export interface HttpClient {
   /**
    * Fetches an https URL under a wall-clock timeout covering the connection,
@@ -167,6 +173,21 @@ export interface HttpClient {
     consume: (response: Response) => Promise<T>,
     redirectPolicy?: RedirectPolicy,
   ) => Promise<T>
+  /**
+   * Returns the status AND the bounded body, without throwing on a non-2xx.
+   *
+   * Exists because a caller that needs the status alongside the body used to
+   * have no bounded way to get it: `fetchText` and friends throw on non-2xx and
+   * hand back only the text, so such a caller reached for `fetchWithTimeout`
+   * with its own `async (r) => ({ status: r.status, body: await r.text() })`.
+   * That `consume` never touches `readBounded`, so `maxResponseBytes` silently
+   * does not apply to it and a hostile or wedged endpoint can buffer until the
+   * agent OOMs. Both GitHub Actions in this family had written exactly that.
+   *
+   * Retries still cover transport failures and timeouts; an HTTP status is a
+   * result here, not an error, so it is returned rather than repeated.
+   */
+  fetchStatusText: (url: string, timeoutMs?: number) => Promise<HttpStatusText>
   fetchJson: <T>(url: string, timeoutMs?: number) => Promise<T>
   fetchText: (url: string, timeoutMs?: number) => Promise<string>
   /** Null on 404, so callers can tell "not published" from a failure without matching error text. */
@@ -332,6 +353,18 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     )
   }
 
+  function fetchStatusText(
+    url: string,
+    timeoutMs: number = METADATA_TIMEOUT_MS,
+  ): Promise<HttpStatusText> {
+    return withRetry(() =>
+      fetchWithTimeout(url, timeoutMs, async (response) => ({
+        status: response.status,
+        body: Buffer.from(await readBounded(response, url)).toString('utf8'),
+      })),
+    )
+  }
+
   function fetchText(url: string, timeoutMs: number = METADATA_TIMEOUT_MS): Promise<string> {
     return withRetry(() =>
       fetchWithTimeout(url, timeoutMs, async (response) => {
@@ -441,6 +474,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 
   return {
     fetchWithTimeout,
+    fetchStatusText,
     fetchJson,
     fetchText,
     fetchTextAllow404,

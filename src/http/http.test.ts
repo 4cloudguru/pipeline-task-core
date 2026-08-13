@@ -4,9 +4,10 @@
  * DOES claim: the scheme pin holds on the initial URL and on every redirect
  * hop; the hop budget is enforced; a hop is authorized against the ORIGINAL
  * host rather than the previous hop; the GitHub asset exception is narrow in
- * both directions (origin and target); a buffered body cannot exceed the cap;
- * retry classification distinguishes deterministic from transient, and an
- * egress refusal is never repeated; a failed download leaves no partial file.
+ * both directions (origin and target); EVERY buffering accessor enforces the
+ * byte cap, including `fetchStatusText`; retry classification distinguishes
+ * deterministic from transient, and an egress refusal is never repeated; a
+ * failed download leaves no partial file.
  *
  * Does NOT claim: that the redirect policy survives DNS rebinding — the host
  * is authorized at check time and is not pinned into the socket, so a name
@@ -14,9 +15,12 @@
  * Nor that TLS is verified: certificate validation is Node's, exercised
  * nowhere here because every test injects `fetchImpl`. Nor that the streamed
  * download path is byte-capped — only buffered reads are, by design, since a
- * release archive legitimately exceeds MAX_RESPONSE_BYTES. Nor that the
- * timeout is pre-emptive: it aborts a signal, so it bounds the connection and
- * a fetch body stream, but not consume work that ignores the signal.
+ * release archive legitimately exceeds MAX_RESPONSE_BYTES. Nor that a CALLER's
+ * own `consume` passed to `fetchWithTimeout` is capped: that callback owns the
+ * body and can buffer it unbounded, which is precisely why `fetchStatusText`
+ * exists — a caller wanting status-plus-body must not have to hand-roll one.
+ * Nor that the timeout is pre-emptive: it aborts a signal, so it bounds the
+ * connection and a fetch body stream, but not consume work that ignores it.
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -340,6 +344,112 @@ describe('http — retry behaviour', () => {
     })
     await client.fetchText('https://a.example/x')
     expect(seen).toEqual(['call-0', 'call-1'])
+  })
+})
+
+/**
+ * The cap is a property of the CLIENT, not of one convenience method. Every
+ * accessor that buffers a body into memory has to honour it, or a caller who
+ * picks the wrong one silently opts out of the control. `fetchStatusText`
+ * exists because the two GitHub Actions in this family each hand-rolled
+ * `fetchWithTimeout(url, t, async (r) => ({ status: r.status, body: await
+ * r.text() }))` to get a status alongside a body, and that `consume` never
+ * reaches `readBounded`. Table-driven over the accessors so a newly added one
+ * that forgets the cap fails here.
+ */
+describe('http — the byte cap applies to every buffering accessor', () => {
+  const OVERSIZE = 'x'.repeat(2048)
+  it.each([
+    ['fetchText', (c: ReturnType<typeof createHttpClient>) => c.fetchText('https://a.example/x')],
+    ['fetchJson', (c: ReturnType<typeof createHttpClient>) => c.fetchJson('https://a.example/x')],
+    [
+      'fetchBuffer',
+      (c: ReturnType<typeof createHttpClient>) => c.fetchBuffer('https://a.example/x'),
+    ],
+    [
+      'fetchTextAllow404',
+      (c: ReturnType<typeof createHttpClient>) => c.fetchTextAllow404('https://a.example/x'),
+    ],
+    [
+      'fetchBufferAllow404',
+      (c: ReturnType<typeof createHttpClient>) => c.fetchBufferAllow404('https://a.example/x'),
+    ],
+    [
+      'fetchStatusText',
+      (c: ReturnType<typeof createHttpClient>) => c.fetchStatusText('https://a.example/x'),
+    ],
+  ])('%s refuses a body over the cap', async (_name, call) => {
+    const { fetchImpl } = scriptedFetch([() => ok(OVERSIZE)])
+    const client = createHttpClient({ fetchImpl, maxResponseBytes: 1024, ...FAST })
+    await expect(call(client)).rejects.toThrow(/exceeded 1024 bytes/)
+  })
+})
+
+describe('http — fetchStatusText', () => {
+  /**
+   * The reason the hand-rolled `consume` existed: these callers need the status
+   * as a VALUE (they poll on it, or format their own message from it), so an
+   * accessor that throws on non-2xx does not serve them.
+   */
+  it.each([
+    [200, 'ok-body'],
+    [404, 'missing'],
+    [409, 'conflict'],
+    [500, 'server error'],
+  ])('returns status %i and its body instead of throwing', async (code, body) => {
+    const { fetchImpl } = scriptedFetch([() => ok(body, code)])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    await expect(client.fetchStatusText('https://a.example/x')).resolves.toEqual({
+      status: code,
+      body,
+    })
+  })
+
+  it('accepts a body exactly at the cap', async () => {
+    const { fetchImpl } = scriptedFetch([() => ok('x'.repeat(64), 503)])
+    const client = createHttpClient({ fetchImpl, maxResponseBytes: 64, ...FAST })
+    await expect(client.fetchStatusText('https://a.example/x')).resolves.toEqual({
+      status: 503,
+      body: 'x'.repeat(64),
+    })
+  })
+
+  it('classifies an oversize body as deterministic, not transient', async () => {
+    const { fetchImpl } = scriptedFetch([() => ok('x'.repeat(100))])
+    const client = createHttpClient({ fetchImpl, maxResponseBytes: 10, ...FAST })
+    const error = await client.fetchStatusText('https://a.example/x').catch((e: unknown) => e)
+    expect((error as HttpError).retryable).toBe(false)
+  })
+
+  it('does not repeat a 5xx — the status is a result, not a failure', async () => {
+    const { fetchImpl, calls } = scriptedFetch([() => ok('down', 500)])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    await expect(client.fetchStatusText('https://a.example/x')).resolves.toEqual({
+      status: 500,
+      body: 'down',
+    })
+    expect(calls).toHaveLength(1)
+  })
+
+  it('still repeats a transport failure', async () => {
+    let n = 0
+    const fetchImpl = (async () => {
+      n += 1
+      if (n < 2) throw new Error('ECONNRESET')
+      return ok('recovered', 200)
+    }) as unknown as typeof fetch
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    await expect(client.fetchStatusText('https://a.example/x')).resolves.toEqual({
+      status: 200,
+      body: 'recovered',
+    })
+    expect(n).toBe(2)
+  })
+
+  it('keeps the scheme pin', async () => {
+    const { fetchImpl } = scriptedFetch([() => ok('never')])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    await expect(client.fetchStatusText('http://a.example/x')).rejects.toThrow(/only https/i)
   })
 })
 
@@ -696,6 +806,7 @@ describe('http — public surface', () => {
       'fetchBuffer',
       'fetchBufferAllow404',
       'fetchJson',
+      'fetchStatusText',
       'fetchText',
       'fetchTextAllow404',
       'fetchWithTimeout',

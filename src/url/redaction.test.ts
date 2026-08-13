@@ -18,12 +18,14 @@
 import { describe, expect, it } from 'vitest'
 import * as redactionModule from './redaction'
 import {
+  LOG_EXCERPT_CHARS,
   extractUrlTokenSecrets,
   extractUrlUserInfoSecrets,
   redactUrl,
   redactUrlUserInfo,
   scrubSecretsFromMessage,
   stripControlCharacters,
+  truncateForLog,
 } from './redaction'
 
 describe('url/redaction — sensitive query parameters', () => {
@@ -210,12 +212,71 @@ describe('url/redaction — stripControlCharacters', () => {
 describe('url/redaction — public surface', () => {
   it('exports exactly the reviewed set', () => {
     expect(Object.keys(redactionModule).sort()).toEqual([
+      'LOG_EXCERPT_CHARS',
       'extractUrlTokenSecrets',
       'extractUrlUserInfoSecrets',
       'redactUrl',
       'redactUrlUserInfo',
       'scrubSecretsFromMessage',
       'stripControlCharacters',
+      'truncateForLog',
     ])
+  })
+})
+
+/**
+ * TABLE C — remote-controlled text bound for a log line or CI annotation.
+ *
+ * The defect this closes, present in both GitHub Actions in this family, is a
+ * thrown Error whose message interpolates a response body straight off the
+ * wire. `core.setFailed` percent-encodes only `%`, CR and LF, so the length
+ * and every other control character were the remote peer's choice.
+ *
+ * Control characters are built with String.fromCharCode so the fixtures stay
+ * readable and no literal C0 byte sits in this source file.
+ */
+const CTRL = (code: number): string => String.fromCharCode(code)
+const CONTROL_CHAR_PATTERN = new RegExp('[\\u0000-\\u001F\\u007F]')
+
+describe('url/redaction - truncateForLog', () => {
+  it.each([
+    ['short', 10, 'short', 'under the limit is returned unchanged'],
+    ['exactly-ten', 11, 'exactly-ten', 'exactly at the limit is not truncated'],
+    ['a' + CTRL(0) + 'bc', 10, 'abc', 'NUL is stripped'],
+    ['a' + CTRL(13) + CTRL(10) + 'b', 10, 'ab', 'CR/LF cannot forge a second log line'],
+    ['a' + CTRL(9) + 'b', 10, 'ab', 'TAB is stripped like the other C0 characters'],
+    ['a' + CTRL(31) + 'b', 10, 'ab', 'top of the C0 range is stripped'],
+    ['a' + CTRL(127) + 'b', 10, 'ab', 'DEL is stripped'],
+    ['plain text', 100, 'plain text', 'nothing to do'],
+    ['', 10, '', 'empty input'],
+  ])('%j @%i -> %j (%s)', (input, max, expected) => {
+    expect(truncateForLog(input as string, max as number)).toBe(expected)
+  })
+
+  it('truncates past the limit and states how much was dropped', () => {
+    expect(truncateForLog('x'.repeat(20), 5)).toBe(
+      'xxxxx... (15 more characters truncated)'.replace('...', '…'),
+    )
+  })
+
+  it('counts DISPLAYED characters - stripping runs before truncating', () => {
+    // 10 payload characters interleaved with control characters. A
+    // truncate-then-strip order would keep fewer than 10 visible characters
+    // and would mis-state the remainder.
+    const noisy = 'abcdefghij'.split('').join(CTRL(0)) + 'TAIL'
+    expect(truncateForLog(noisy, 10)).toBe('abcdefghij… (4 more characters truncated)')
+  })
+
+  it('cannot be made to emit a control character at the truncation boundary', () => {
+    const attack = 'A'.repeat(511) + CTRL(10) + '::error::forged' + 'B'.repeat(2000)
+    const out = truncateForLog(attack)
+    expect(CONTROL_CHAR_PATTERN.test(out)).toBe(false)
+    expect(out.startsWith('A'.repeat(511))).toBe(true)
+  })
+
+  it('defaults to LOG_EXCERPT_CHARS', () => {
+    const out = truncateForLog('y'.repeat(LOG_EXCERPT_CHARS + 100))
+    expect(out.startsWith('y'.repeat(LOG_EXCERPT_CHARS))).toBe(true)
+    expect(out).toContain('(100 more characters truncated)')
   })
 })

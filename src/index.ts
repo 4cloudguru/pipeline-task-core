@@ -44,15 +44,18 @@ export type {
   HttpClient,
   HttpClientOptions,
   HttpMessages,
+  HttpStatusText,
   RedirectPolicy,
 } from './http/http'
 export {
+  LOG_EXCERPT_CHARS,
   extractUrlTokenSecrets,
   extractUrlUserInfoSecrets,
   redactUrl,
   redactUrlUserInfo,
   scrubSecretsFromMessage,
   stripControlCharacters,
+  truncateForLog,
 } from './url/redaction'
 export { validateUrlPathSegment } from './url/path-segment'
 export { resolveProxy } from './proxy/proxy'

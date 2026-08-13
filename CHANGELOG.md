@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.2.0...v0.3.0) (2026-08-13)
+
+
+### Features
+
+* **gpg:** report why a detached signature did not verify ([#21](https://github.com/4cloudguru/pipeline-task-core/issues/21)) ([3a03c2c](https://github.com/4cloudguru/pipeline-task-core/commit/3a03c2c90758273214718f339a6404c412c30878))
+
 ## [0.2.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.1.2...v0.2.0) (2026-08-12)
 
 

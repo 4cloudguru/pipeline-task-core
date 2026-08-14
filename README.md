@@ -44,6 +44,35 @@ import type { VerifyDetached } from '@4cloudguru/pipeline-task-core/gpg'
 `.vsix`. It deliberately ships **no signing key** — callers pass their own armoured key in and keep
 their own key-freshness checks, because a trust root belongs in the repository that relies on it.
 
+## Proxy support
+
+`resolveProxy` reads the configuration an Azure DevOps agent hands out. `resolveEnvProxy` reads the
+`HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` variables a GitHub self-hosted runner sets — in both
+spellings, lowercase winning — which Node's `fetch` honours on its own for none of them. Neither
+builds a dispatcher: `undici` stays a consumer dependency.
+
+```ts
+import { ProxyAgent } from 'undici'
+import { createHttpClient, resolveEnvProxy } from '@4cloudguru/pipeline-task-core'
+
+const client = createHttpClient({
+  // Called for every attempt AND every redirect hop, with the URL about to be
+  // issued — the answer depends on the destination, so a chain that redirects
+  // off the origin has to be resolved again.
+  fetchOptions: (url) => {
+    const proxy = resolveEnvProxy(url)
+    if (!proxy) return {}
+    proxy.secrets.forEach((secret) => core.setSecret(secret)) // credentials in the URL are secrets
+    return { dispatcher: new ProxyAgent(proxy.proxyUrl) } as RequestInit
+  },
+})
+```
+
+A proxy changes which socket carries the request, never which destination is permitted.
+`assertEgressHostAllowed` still runs against the **destination** host — the initial one and every
+redirect hop — and its subject is never the proxy: a CONNECT tunnel to an unauthorized host is still
+unauthorized egress.
+
 ## Development
 
 ```bash

@@ -62,7 +62,7 @@ const CONSUMER_TSCONFIG = {
 // Touches both entry points and USES what it imports — an unused import can be
 // elided before resolution and would prove nothing.
 const CONSUMER_SOURCE = `
-import { retryAsync, parseRetryAfterMs, redactUrl, VerificationFailure, assertEgressHostAllowed } from '${PKG}';
+import { retryAsync, parseRetryAfterMs, redactUrl, VerificationFailure, assertEgressHostAllowed, resolveEnvProxy } from '${PKG}';
 import { verifyDetached } from '${PKG}/gpg';
 import type { VerifyDetachedResult } from '${PKG}/gpg';
 
@@ -80,7 +80,11 @@ export async function use(): Promise<string> {
     const reasons: readonly string[] = result.reasons ?? [];
     await retryAsync(async () => undefined, { retries: 0 });
     assertEgressHostAllowed;
-    return [capped, safe, failure.name, result.verified, reasons.length].join(',');
+    // The destination is a required argument, and an injected environment is
+    // how a consumer's own tests reach this; both are part of the published
+    // signature, so a change to either stops compiling here.
+    const proxy = resolveEnvProxy('https://example.com/v1', { https_proxy: 'http://proxy.internal:8080' });
+    return [capped, safe, failure.name, result.verified, reasons.length, proxy?.proxyUrl ?? 'direct'].join(',');
 }
 `
 

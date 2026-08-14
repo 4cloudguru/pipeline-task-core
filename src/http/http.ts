@@ -19,6 +19,7 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { retryAsync } from '../retry/retry'
 import { parseRetryAfterMs } from '../retry/retry-after'
+import { truncateForLog } from '../url/redaction'
 
 /** Quick metadata lookups: checkpoint/registry version endpoints, checksums, signatures. */
 export const METADATA_TIMEOUT_MS = 60_000
@@ -37,9 +38,6 @@ export const MAX_REDIRECTS = 5
  * through `downloadToFile` and are not subject to this.
  */
 export const MAX_RESPONSE_BYTES = 10 * 1024 * 1024
-
-/** Bytes of a non-JSON body echoed in a parse-failure message, so a credential-bearing page cannot be logged whole. */
-const JSON_ERROR_BODY_CHARS = 512
 
 /**
  * A failure carrying whether it is worth repeating. `retryAfterMs` holds the
@@ -255,13 +253,20 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
         if (redirects >= MAX_REDIRECTS) {
           throw new HttpError(`Too many redirects fetching ${url} (limit ${MAX_REDIRECTS}).`, false)
         }
+        // A Location header is remote-controlled, so both messages below echo a
+        // string the peer chose. The WHATWG parser has already neutralized the
+        // control characters (it strips tab/CR/LF and percent-encodes the rest),
+        // but not the LENGTH — a hostname or path bounded only by the header
+        // limit would otherwise decide how much of the consumer's log the
+        // failure occupies. Same excerpt-safety helper as every other remote
+        // string this module interpolates.
         const next = new URL(location, currentUrl)
         if (next.protocol !== 'https:') {
-          throw new HttpError(messages.insecureUrl(next.toString()), false)
+          throw new HttpError(messages.insecureUrl(truncateForLog(next.toString())), false)
         }
         if (!(await redirectPolicy(originHost, next))) {
           throw new HttpError(
-            `Refusing to follow an off-host redirect (${originHost} -> ${next.host}) while fetching ${url}.`,
+            `Refusing to follow an off-host redirect (${originHost} -> ${truncateForLog(next.host)}) while fetching ${url}.`,
             false,
           )
         }
@@ -351,8 +356,13 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
           // registry answering with an HTML error page — is deterministic, not
           // transient. A bare SyntaxError would default to retryable and burn
           // the whole budget on it.
+          //
+          // `truncateForLog`, not `.slice()`: the peer chose these bytes, and a
+          // length bound leaves every C0 control in them intact on the way to
+          // `core.setFailed`/`tl.setResult`. It also states how much it dropped,
+          // which is what the old "first N bytes" prose was there to convey.
           throw new HttpError(
-            `Response from ${url} was not valid JSON; first ${JSON_ERROR_BODY_CHARS} bytes: ${text.slice(0, JSON_ERROR_BODY_CHARS)}`,
+            `Response from ${url} was not valid JSON: ${truncateForLog(text)}`,
             false,
           )
         }

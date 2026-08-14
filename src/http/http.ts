@@ -123,11 +123,18 @@ const DEFAULT_MESSAGES: HttpMessages = {
 
 export interface HttpClientOptions {
   /**
-   * Per-request `fetch` init, re-evaluated for every attempt. This is where a
-   * task supplies an undici `ProxyAgent` dispatcher; re-evaluating means a
-   * proxy change between retries is picked up.
+   * Per-request `fetch` init, re-evaluated for every attempt AND every redirect
+   * hop. This is where a task supplies an undici `ProxyAgent` dispatcher;
+   * re-evaluating means a proxy change between retries is picked up.
+   *
+   * It receives the URL of the hop about to be issued, because a proxy decision
+   * belongs to the destination: `NO_PROXY` is matched against it and its scheme
+   * picks the variable (see `resolveEnvProxy`), so a chain that redirects off
+   * the origin has to be resolved again. Supplying a dispatcher does not move
+   * the egress decision — `authorizeHost` still runs against the destination on
+   * every hop, and a tunnel to a refused host is still refused.
    */
-  fetchOptions?: () => RequestInit | Promise<RequestInit>
+  fetchOptions?: (url: string) => RequestInit | Promise<RequestInit>
   /** `fetch` implementation, injectable so tests need no network. Defaults to the global. */
   fetchImpl?: typeof fetch
   /** Receives retry diagnostics. Wire to the task's debug channel. */
@@ -211,7 +218,7 @@ export interface HttpClient {
 
 export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
   const doFetch: typeof fetch = options.fetchImpl ?? ((...args) => fetch(...args))
-  const getFetchOptions = options.fetchOptions ?? ((): RequestInit => ({}))
+  const getFetchOptions = options.fetchOptions ?? ((_url: string): RequestInit => ({}))
   const messages: HttpMessages = { ...DEFAULT_MESSAGES, ...options.messages }
   const defaultRedirectPolicy = options.redirectPolicy ?? sameHostOnly
   const attempts = options.attempts ?? 3
@@ -234,7 +241,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     try {
       let currentUrl = url
       for (let redirects = 0; ; redirects++) {
-        const init = await getFetchOptions()
+        const init = await getFetchOptions(currentUrl)
         const response = await doFetch(currentUrl, {
           ...init,
           signal: controller.signal,

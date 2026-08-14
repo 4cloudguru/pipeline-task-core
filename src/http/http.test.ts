@@ -329,6 +329,26 @@ describe('http — retry behaviour', () => {
     expect(n).toBe(2)
   })
 
+  it('hands fetchOptions the URL of the hop it is about to issue', async () => {
+    // Not the original URL: a proxy decision is per DESTINATION — NO_PROXY is
+    // matched against it, and the scheme picks the variable — so a chain that
+    // redirects off the origin has to be re-resolved. Anchored on the original,
+    // every hop would inherit the first hop's answer.
+    const seen: string[] = []
+    const { fetchImpl } = scriptedFetch([() => redirect('https://cdn.example/two'), () => ok('ok')])
+    const client = createHttpClient({
+      fetchImpl,
+      redirectPolicy: () => true,
+      fetchOptions: (url) => {
+        seen.push(url)
+        return {}
+      },
+      ...FAST,
+    })
+    await client.fetchText('https://a.example/one')
+    expect(seen).toEqual(['https://a.example/one', 'https://cdn.example/two'])
+  })
+
   it('re-evaluates fetchOptions per attempt, so a rotated proxy is picked up', async () => {
     const seen: string[] = []
     let n = 0

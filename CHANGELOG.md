@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.4.0...v0.5.0) (2026-08-14)
+
+
+### Features
+
+* **proxy:** resolve HTTPS_PROXY/NO_PROXY for a given destination ([#34](https://github.com/4cloudguru/pipeline-task-core/issues/34)) ([63c208a](https://github.com/4cloudguru/pipeline-task-core/commit/63c208aa30619d7d007c6a7c7afdbb7af6f65939))
+
+
+### Bug Fixes
+
+* **http:** route remote text in messages through truncateForLog ([#33](https://github.com/4cloudguru/pipeline-task-core/issues/33)) ([23d3a0f](https://github.com/4cloudguru/pipeline-task-core/commit/23d3a0f928367a4380601b7604f4d9c538eead9f))
+
 ## [0.4.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.3.1...v0.4.0) (2026-08-13)
 
 

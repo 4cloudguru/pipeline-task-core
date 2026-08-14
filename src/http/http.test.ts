@@ -26,6 +26,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { LOG_EXCERPT_CHARS } from '../url/redaction'
 import * as httpModule from './http'
 import {
   DOWNLOAD_TIMEOUT_MS,
@@ -512,8 +513,81 @@ describe('http — fetchJson', () => {
     const { fetchImpl } = scriptedFetch([() => ok('N'.repeat(5000))])
     const client = createHttpClient({ fetchImpl, ...FAST })
     const error = await client.fetchJson('https://a.example/x').catch((e: unknown) => e)
-    expect((error as Error).message).toContain('N'.repeat(512))
-    expect((error as Error).message).not.toContain('N'.repeat(513))
+    expect((error as Error).message).toContain('N'.repeat(LOG_EXCERPT_CHARS))
+    expect((error as Error).message).not.toContain('N'.repeat(LOG_EXCERPT_CHARS + 1))
+  })
+})
+
+/**
+ * TABLE — every string a REMOTE peer controls that this module interpolates into
+ * a message goes through `truncateForLog`, the package's own excerpt-safety
+ * primitive, rather than a hand-rolled `.slice()`.
+ *
+ * Two independent problems, and a `.slice()` only addresses the second:
+ *
+ *  1. CONTROL CHARACTERS. These messages become an `HttpError` that consumers
+ *     surface through `core.setFailed` (GitHub Actions) or `tl.setResult`
+ *     (Azure Pipelines). GitHub percent-encodes only `%`, CR and LF, and ADO's
+ *     logging commands are line-oriented too, so ESC and the rest of C0 reach
+ *     the rendered annotation.
+ *  2. UNBOUNDED LENGTH. The peer would otherwise choose how much of the
+ *     consumer's log the failure occupies.
+ *
+ * The redirect rows are here because a `Location` header is remote-controlled
+ * too. Those carry no raw controls — the WHATWG parser strips tab/CR/LF and
+ * percent-encodes the remainder — so LENGTH is the live half for them, bounded
+ * only by the header limit until it goes through the same helper.
+ */
+describe('http — remote-controlled text in messages is excerpt-safe', () => {
+  // Built by code point rather than typed literally, so an editor or a
+  // clipboard cannot silently normalise the very bytes under test away.
+  const ctrl = (code: number): string => String.fromCharCode(code)
+  const controls: ReadonlyArray<readonly [string, string]> = [
+    [ctrl(0x1b), 'ESC — an ANSI sequence rewrites what the annotation renders'],
+    [ctrl(0x0d), 'CR — GitHub escapes this one; ADO does not'],
+    [ctrl(0x0a), 'LF — forges a second ##vso logging command on the next line'],
+    [ctrl(0x07), 'BEL'],
+    [ctrl(0x7f), 'DEL'],
+  ]
+
+  it.each(controls)('fetchJson strips %j from a non-JSON body (%s)', async (control) => {
+    const { fetchImpl } = scriptedFetch([
+      () => ok(`<html>${control}[31mportal${control}[0m</html>`),
+    ])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    const error = await client.fetchJson('https://a.example/x').catch((e: unknown) => e)
+    expect((error as Error).message).toContain('portal')
+    expect((error as Error).message).not.toContain(control)
+  })
+
+  it('fetchJson states how much of the body it dropped', async () => {
+    // A bare cut cannot be told from a short body. The elision marker is what
+    // makes "this is only the first part" readable, which is why the previous
+    // "first N bytes:" prose is no longer needed.
+    const { fetchImpl } = scriptedFetch([() => ok('N'.repeat(LOG_EXCERPT_CHARS + 20))])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    const error = await client.fetchJson('https://a.example/x').catch((e: unknown) => e)
+    expect((error as Error).message).toContain('20 more characters truncated')
+  })
+
+  it('bounds a redirect target echoed by the scheme refusal', async () => {
+    const long = `http://a.example/${'q'.repeat(4000)}`
+    const { fetchImpl } = scriptedFetch([() => redirect(long)])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    const error = await client.fetchText('https://a.example/start').catch((e: unknown) => e)
+    expect((error as Error).message).toMatch(/only https/i)
+    expect((error as Error).message.length).toBeLessThan(LOG_EXCERPT_CHARS + 200)
+  })
+
+  it('bounds a redirect target echoed by the off-host refusal', async () => {
+    // A long HOST, not a long path: this message echoes `next.host` alone, and
+    // the parser accepts a hostname far longer than any real one.
+    const long = `https://${'q'.repeat(4000)}.example/x`
+    const { fetchImpl } = scriptedFetch([() => redirect(long)])
+    const client = createHttpClient({ fetchImpl, ...FAST })
+    const error = await client.fetchText('https://a.example/start').catch((e: unknown) => e)
+    expect((error as Error).message).toMatch(/off-host redirect/i)
+    expect((error as Error).message.length).toBeLessThan(LOG_EXCERPT_CHARS + 200)
   })
 })
 

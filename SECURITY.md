@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Report privately via [GitHub Security Advisories](https://github.com/sethbacon/pipeline-task-core/security/advisories/new).
+Report privately via [GitHub Security Advisories](https://github.com/4cloudguru/pipeline-task-core/security/advisories/new).
 Please do not open a public issue for a suspected vulnerability.
 
 Include the affected version, a description of the impact, and reproduction steps.

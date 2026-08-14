@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.5.0...v0.5.1) (2026-08-14)
+
+
+### Documentation
+
+* point the advisory link at the repo's current owner ([#36](https://github.com/4cloudguru/pipeline-task-core/issues/36)) ([26f297b](https://github.com/4cloudguru/pipeline-task-core/commit/26f297b6dfc76c4330a22938cc1bc6f6fe4e8f9a))
+
 ## [0.5.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.4.0...v0.5.0) (2026-08-14)
 
 

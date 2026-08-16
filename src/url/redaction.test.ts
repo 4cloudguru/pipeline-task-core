@@ -25,6 +25,7 @@ import {
   redactUrlUserInfo,
   scrubSecretsFromMessage,
   stripControlCharacters,
+  truncateBody,
   truncateForLog,
 } from './redaction'
 
@@ -219,8 +220,51 @@ describe('url/redaction — public surface', () => {
       'redactUrlUserInfo',
       'scrubSecretsFromMessage',
       'stripControlCharacters',
+      'truncateBody',
       'truncateForLog',
     ])
+  })
+})
+
+/**
+ * TABLE B2 — `truncateBody`, the OTHER truncation helper.
+ *
+ * It exists because four transports in azure-pipelines-terraform were carrying
+ * a verbatim hand-copy of it, byte-compared by a gate that could only ever see
+ * that one repository. The bytes below are the failure text those tasks emit
+ * today, so this table is a compatibility contract, not a design: the cap, the
+ * marker and the untouched control characters all differ from `truncateForLog`
+ * on purpose, and converging the two is a behaviour change that belongs in its
+ * own commit.
+ */
+describe('url/redaction — truncateBody', () => {
+  it('returns an empty string for an empty body', () => {
+    expect(truncateBody('')).toBe('')
+  })
+
+  it('leaves a body at or under the bound untouched', () => {
+    expect(truncateBody('short body')).toBe('short body')
+    expect(truncateBody('x'.repeat(500))).toBe('x'.repeat(500))
+  })
+
+  it('caps at 500 characters by default and marks the elision', () => {
+    const out = truncateBody('x'.repeat(501))
+    expect(out).toBe(`${'x'.repeat(500)}… (truncated)`)
+  })
+
+  it('honours an explicit bound', () => {
+    expect(truncateBody('abcdef', 3)).toBe('abc… (truncated)')
+  })
+
+  it('does NOT strip control characters, unlike truncateForLog', () => {
+    // Pinned, not endorsed. `truncateForLog` is the stronger of the two and is
+    // where a new caller should start; changing this one would change the text
+    // four shipped tasks emit.
+    // Built with fromCharCode, like every other control-character fixture in
+    // this file, so the source stays readable and diffable.
+    const withBell = `a${String.fromCharCode(7)}b`
+    expect(truncateBody(withBell)).toBe(withBell)
+    expect(truncateForLog(withBell)).toBe('ab')
   })
 })
 

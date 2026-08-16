@@ -64,6 +64,34 @@ export function truncateForLog(value: string, maxChars: number = LOG_EXCERPT_CHA
   return `${safeValue.slice(0, maxChars)}… (${safeValue.length - maxChars} more characters truncated)`
 }
 
+/**
+ * Bounds a remote response body before it is interpolated into a thrown error
+ * or a log line, so a large — or credential-reflecting — body cannot be dumped
+ * wholesale. The credential itself is registered with the host's masker as
+ * well; this is defence in depth against verbose error bodies.
+ *
+ * Callers that scrub known request secrets out of a body do so BEFORE calling
+ * this, so a secret straddling the truncation boundary is still scrubbed whole.
+ *
+ * WHY THIS IS NOT `truncateForLog`. They are close but not the same function,
+ * and the difference is visible to an operator: this one caps at 500 rather than
+ * 512, marks the elision as `… (truncated)` rather than naming the dropped
+ * count, and does NOT strip control characters. It was hand-copied verbatim into
+ * four transports in azure-pipelines-terraform and byte-compared across all
+ * four, so its output is the failure text those tasks emit today. Converging the
+ * two would change that text and the bound each promises, which is a behaviour
+ * change and belongs in its own commit — not smuggled into the extraction that
+ * gave them a single owner. `truncateForLog` is the stronger of the two (it
+ * neutralizes the C0 characters that forge a second logging command) and is
+ * where a new caller should start.
+ */
+export function truncateBody(body: string, max = 500): string {
+  if (!body) {
+    return ''
+  }
+  return body.length > max ? `${body.slice(0, max)}… (truncated)` : body
+}
+
 function isSensitiveQueryParam(name: string): boolean {
   const lower = name.toLowerCase()
   return (

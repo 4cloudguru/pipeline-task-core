@@ -47,6 +47,8 @@ export type {
   HttpStatusText,
   RedirectPolicy,
 } from './http/http'
+export { DEFAULT_REQUEST_TIMEOUT_MS, httpsRequest } from './https-request/https-request'
+export type { HttpsRequestOptions, HttpsResponse } from './https-request/https-request'
 export {
   LOG_EXCERPT_CHARS,
   extractUrlTokenSecrets,
@@ -55,11 +57,14 @@ export {
   redactUrlUserInfo,
   scrubSecretsFromMessage,
   stripControlCharacters,
+  truncateBody,
   truncateForLog,
 } from './url/redaction'
 export { validateUrlPathSegment } from './url/path-segment'
 export { resolveEnvProxy, resolveProxy } from './proxy/proxy'
 export type { AgentProxyConfiguration, ProxyEnvironment, ResolvedProxy } from './proxy/proxy'
+export { createProxyTunnelAgent } from './proxy/tunnel-agent'
+export type { ProxyTunnelAgentOptions } from './proxy/tunnel-agent'
 export {
   VerificationFailure,
   discardArtifactOnFailure,

@@ -73,6 +73,49 @@ A proxy changes which socket carries the request, never which destination is per
 redirect hop — and its subject is never the proxy: a CONNECT tunnel to an unauthorized host is still
 unauthorized egress.
 
+## The credential-bearing transport
+
+`createHttpClient` is for downloading public artifacts over `fetch`. `httpsRequest` is the other
+transport: raw `node:https`, for the requests that carry a bearer token, an API key or a basic
+credential. That is why its refusal is phrased as *refusing to send credentials* over a non-https
+URL rather than refusing to fetch one.
+
+`createProxyTunnelAgent` is the raw-https counterpart of `resolveProxy`: `node:https` honours no
+proxy setting unless handed an `agent`, so this builds one that opens an HTTP `CONNECT` tunnel and
+upgrades it to TLS. `registerSecret` is **required**, not optional — the derived base64 `Basic`
+credential is a byte sequence the caller never constructs and so could never think to mask.
+
+```ts
+import { createProxyTunnelAgent, httpsRequest, truncateBody } from '@4cloudguru/pipeline-task-core'
+
+const { status, body } = await httpsRequest({
+  method: 'POST',
+  url: new URL(registryUrl), // parsed by the caller, which owns the "bad URL" message
+  headers: { Authorization: `Bearer ${apiKey}` },
+  body: Buffer.from(JSON.stringify(payload), 'utf8'),
+  agent: createProxyTunnelAgent(tl.getHttpProxyConfiguration(), {
+    tunnelTimeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+    registerSecret: (secret) => tl.setSecret(secret),
+  }),
+})
+if (status >= 400) throw new Error(`Publish failed: ${truncateBody(body)}`)
+```
+
+### Why it is not `fetch`
+
+Two independent reasons, and both still hold:
+
+- **`undici` stays out.** This package has no runtime dependencies and is not growing one; consumers
+  pin `undici` themselves, currently to 7.x because 8 breaks against the Node 24 bundles.
+- **The consumers mock with `nock` and inject an `agent`.** `fetch` has no `agent` option at all, so
+  a port would silently drop agent-proxy support — the tunnel above — and every test that drives a
+  request through a real CONNECT proxy with it.
+
+A status is returned, never thrown on: callers differ on what a non-2xx means, so the decision stays
+with them. `truncateBody` is the bound that keeps a remote body from choosing how much of the job log
+a failure occupies; `truncateForLog` is the stronger helper (it also strips the C0 characters that
+forge a logging command) and is where a new caller should start.
+
 ## Development
 
 ```bash

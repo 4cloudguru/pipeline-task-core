@@ -62,7 +62,7 @@ const CONSUMER_TSCONFIG = {
 // Touches both entry points and USES what it imports — an unused import can be
 // elided before resolution and would prove nothing.
 const CONSUMER_SOURCE = `
-import { retryAsync, parseRetryAfterMs, redactUrl, VerificationFailure, assertEgressHostAllowed, resolveEnvProxy } from '${PKG}';
+import { retryAsync, parseRetryAfterMs, redactUrl, VerificationFailure, assertEgressHostAllowed, resolveEnvProxy, createProxyTunnelAgent, httpsRequest, truncateBody } from '${PKG}';
 import { verifyDetached } from '${PKG}/gpg';
 import type { VerifyDetachedResult } from '${PKG}/gpg';
 
@@ -84,7 +84,22 @@ export async function use(): Promise<string> {
     // how a consumer's own tests reach this; both are part of the published
     // signature, so a change to either stops compiling here.
     const proxy = resolveEnvProxy('https://example.com/v1', { https_proxy: 'http://proxy.internal:8080' });
-    return [capped, safe, failure.name, result.verified, reasons.length, proxy?.proxyUrl ?? 'direct'].join(',');
+    // The raw-https transport an ADO task's credential-bearing sink uses. The
+    // agent is what carries the proxy (node:https honours none of the
+    // environment on its own), and registerSecret is REQUIRED -- dropping it
+    // here must stop compiling, because that is the whole guarantee.
+    const agent = createProxyTunnelAgent(
+        { proxyUrl: 'http://proxy.internal:8080', proxyUsername: 'u', proxyPassword: 'p' },
+        { tunnelTimeoutMs: 30000, registerSecret: (secret: string) => void secret },
+    );
+    const response = await httpsRequest({
+        method: 'GET',
+        url: new URL('https://example.com/v1/modules'),
+        headers: { Authorization: 'Bearer k' },
+        agent,
+    });
+    const excerpt: string = truncateBody(response.body);
+    return [capped, safe, failure.name, result.verified, reasons.length, proxy?.proxyUrl ?? 'direct', response.status, excerpt].join(',');
 }
 `
 

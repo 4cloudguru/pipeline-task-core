@@ -12,14 +12,23 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { DEFAULT_REQUEST_TIMEOUT_MS, httpsRequest } from './https-request'
 
 /**
- * `nock` is the point, not a convenience.
+ * `nock` is the point, not a convenience: the consumers that own this transport
+ * mock their HTTP with it, and it is why the raw-`https.request` shape is a
+ * contract rather than an implementation detail.
  *
- * The consumers that own this transport intercept HTTP with nock, which patches
- * `node:http`/`node:https` and cannot see `undici`. If this module is ever
- * rewritten onto `fetch`, every assertion below stops being reached and this
- * file goes red — which is the whole reason the raw-`https.request` shape is
- * treated as a contract rather than an implementation detail. A green suite that
- * silently stopped intercepting is the failure this exists to prevent.
+ * WHAT THIS FILE DOES AND DOES NOT PROVE — measured, not assumed. `scope.isDone()`
+ * is NOT by itself evidence that the transport is still raw https. nock 14 —
+ * which is the version the ServiceNow task pins — intercepts `fetch` as well, so
+ * a rewrite onto undici still satisfies a scope here. Mutating the body of
+ * `httpsRequest` to call `fetch()` was run, and four of these cases stayed green.
+ *
+ * The five that went red are the ones asserting things this transport does and a
+ * `fetch` port would have to re-earn: the `Content-Length` it derives, the raw
+ * `IncomingHttpHeaders` it hands back, and the byte cap it enforces while
+ * streaming. The load-bearing structural check is in
+ * `https-request.timeout.test.ts`, which drives the request through an injected
+ * `agent` — `fetch` has no such option, so that case cannot pass under a port,
+ * and it did not.
  */
 describe('httpsRequest — nock intercepts the transport', () => {
   beforeAll(() => {
@@ -38,7 +47,7 @@ describe('httpsRequest — nock intercepts the transport', () => {
     nock.cleanAll()
   })
 
-  it('is intercepted at all, proving the raw-https shape survives', async () => {
+  it('is intercepted, so the consumers that mock with nock keep working', async () => {
     const scope = nock('https://registry.example.com').get('/v1/modules').reply(200, 'ok')
 
     const response = await httpsRequest({
@@ -48,9 +57,6 @@ describe('httpsRequest — nock intercepts the transport', () => {
 
     expect(response.status).toBe(200)
     expect(response.body).toBe('ok')
-    // If a rewrite moved this onto undici, nock would not have matched and the
-    // request would have escaped to the network (or been refused by
-    // disableNetConnect) instead of satisfying this scope.
     expect(scope.isDone()).toBe(true)
   })
 

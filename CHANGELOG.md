@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.5.1...v0.6.0) (2026-08-16)
+
+
+### Features
+
+* share the credential-bearing raw-https transport ([#39](https://github.com/4cloudguru/pipeline-task-core/issues/39)) ([116ef09](https://github.com/4cloudguru/pipeline-task-core/commit/116ef093e79cc38cfa9e4c1bd9ca47c421b79c7f))
+
 ## [0.5.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.5.0...v0.5.1) (2026-08-14)
 
 

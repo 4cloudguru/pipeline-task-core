@@ -11,6 +11,12 @@ updates:
     # dangerous in its first hours, before anyone has looked at it.
     cooldown:
       default-days: 7
+    # codeql-action's init/analyze are separate Dependabot dependencies but are
+    # version-locked at runtime, so they have to move in a single PR.
+    groups:
+      github-actions-dependencies:
+        patterns:
+          - "*"
 
   - package-ecosystem: npm
     directory: /

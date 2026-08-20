@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.1...v0.6.2) (2026-08-20)
+
+
+### Documentation
+
+* **security:** record the shared-workflow trust relationship, and fix what it invalidated ([#52](https://github.com/4cloudguru/pipeline-task-core/issues/52)) ([3e6b860](https://github.com/4cloudguru/pipeline-task-core/commit/3e6b860b12b7f8bb6453850e2bbff9907f2a9ca7))
+
 ## [0.6.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.0...v0.6.1) (2026-08-20)
 
 

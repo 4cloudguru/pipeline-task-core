@@ -1,7 +1,33 @@
 ---
+# Delegates to the shared definition in 4cloudguru/shared-workflows.
+#
+# This file used to be a local copy. THIRTEEN repos across two owners carry a
+# release-please workflow, in seven distinct versions -- all with the same
+# config-file, manifest-file, App id variable and App key secret. With this
+# batch, nine of the thirteen call the shared definition; the four still
+# holding local copies are azure-pipelines-{terraform,packer,release-docs} and
+# hcp-terraform-pwsh.
+#
+# NOTE THE DIRECTION OF THIS PARTICULAR CONVERSION. Most of the twelve were
+# converted because the shared definition was stricter than they were. This
+# repo was the opposite: its local copy ran harden-runner, a job timeout, a
+# non-cancelling concurrency group and a credential preflight that the shared
+# definition did NOT have, and that the five sethbacon repos had never had.
+#
+# Converting it as-is would have SILENTLY REGRESSED it -- a consolidation
+# quietly removing controls the repo already ran. So those controls were folded
+# INTO the shared workflow first (see shared-workflows PRs #3 and #4), and all
+# nine callers now get them. Nothing is lost here; eight other repos gained.
+#
+# PINNED BY SHA, not by a tag or @main. A shared workflow is itself something
+# that drifts, and repos on different pins is HARDER to see than divergent
+# files -- every repo looks like it is using "the shared one".
+#
+# `vars` resolves against THIS repository, so RELEASE_DISPATCH_APP_ID is
+# unchanged and nothing about the App installation moves.
 name: Release Please
 
-"on":
+on:
   push:
     branches: [main]
   workflow_dispatch: {}
@@ -9,33 +35,12 @@ name: Release Please
 permissions:
   contents: read
 
-# Non-cancelling: a run that reaches the tag/release-cutting step is producing
-# an external, hard-to-undo artifact and must be allowed to finish.
-concurrency:
-  group: release-please
-  cancel-in-progress: false
-
 jobs:
   release-please:
-    name: Release PR
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
-        with:
-          egress-policy: audit
-      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        id: app-token
-        with:
-          client-id: ${{ vars.RELEASE_DISPATCH_APP_ID }}
-          private-key: ${{ secrets.RELEASE_DISPATCH_APP_KEY }}
-          # Scope the token to what release-please needs rather than inheriting
-          # the app's blanket installation permissions. The installation is NOT
-          # granted `issues`, so requesting it 422s the token step.
-          permission-contents: write
-          permission-pull-requests: write
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          config-file: .release-please-config.json
-          manifest-file: .release-please-manifest.json
+    uses: 4cloudguru/shared-workflows/.github/workflows/release-please.yml@2279e55c6318846f60f0c8ffcbadbeb9317e5fb5
+    # Exactly one secret, named. NOT `secrets: inherit` -- that forwards EVERY
+    # secret in this repository to the called workflow, which zizmor flags
+    # (secrets-inherit) and which would be an over-grant introduced by a change
+    # whose whole point is least privilege.
+    secrets:
+      RELEASE_DISPATCH_APP_KEY: ${{ secrets.RELEASE_DISPATCH_APP_KEY }}

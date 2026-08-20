@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.0...v0.6.1) (2026-08-20)
+
+
+### Bug Fixes
+
+* **ci:** refuse to run signature-replay when Dependabot edited the workflow ([#44](https://github.com/4cloudguru/pipeline-task-core/issues/44)) ([89dd0e0](https://github.com/4cloudguru/pipeline-task-core/commit/89dd0e087be98f5849ec3fb55cab843a2367b170))
+
 ## [0.6.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.5.1...v0.6.0) (2026-08-16)
 
 

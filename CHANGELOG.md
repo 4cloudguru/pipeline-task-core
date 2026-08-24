@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.2...v0.6.3) (2026-08-23)
+
+
+### Documentation
+
+* add pem-normalizer to the module inventory ([#54](https://github.com/4cloudguru/pipeline-task-core/issues/54)) ([03c9dbe](https://github.com/4cloudguru/pipeline-task-core/commit/03c9dbe3992eb84bb1be5c008fe87ee9f5b28890))
+
 ## [0.6.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.1...v0.6.2) (2026-08-20)
 
 

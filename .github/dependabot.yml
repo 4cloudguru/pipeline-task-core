@@ -5,8 +5,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
     commit-message:
-      prefix: deps
+      prefix: "chore(deps)"
     # Don't adopt a release the moment it lands; a compromised version is most
     # dangerous in its first hours, before anyone has looked at it.
     cooldown:
@@ -22,8 +25,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
     commit-message:
-      prefix: deps
+      prefix: "chore(deps)"
     groups:
       dev-dependencies:
         dependency-type: development
@@ -61,7 +67,7 @@ updates:
       - dependencies
       - github-actions
     commit-message:
-      prefix: "chore(ci)"
+      prefix: "chore(deps)"
     groups:
       commit-message-check:
         patterns:

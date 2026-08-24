@@ -1,6 +1,6 @@
 {
   "name": "@4cloudguru/pipeline-task-core",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "description": "Shared HTTP, retry, egress and redaction primitives for the Azure Pipelines task extensions.",
   "license": "Apache-2.0",
   "private": false,

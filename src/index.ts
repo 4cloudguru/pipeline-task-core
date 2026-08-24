@@ -71,3 +71,4 @@ export {
   isVerificationFailure,
 } from './verification/verification'
 export type { DiscardOptions } from './verification/verification'
+export { normalizePem } from './pem/pem-normalizer'

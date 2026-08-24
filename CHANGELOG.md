@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.3...v0.7.0) (2026-08-24)
+
+
+### Features
+
+* add pem-normalizer ([#56](https://github.com/4cloudguru/pipeline-task-core/issues/56)) ([f4f496b](https://github.com/4cloudguru/pipeline-task-core/commit/f4f496bbba1f86ed18c3dca3959b367a7a58336c))
+
 ## [0.6.3](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.2...v0.6.3) (2026-08-23)
 
 

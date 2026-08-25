@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.7.0...v0.7.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **ci:** make zizmor fail the build instead of filing a report ([#65](https://github.com/4cloudguru/pipeline-task-core/issues/65)) ([d09cb86](https://github.com/4cloudguru/pipeline-task-core/commit/d09cb86d6af883e6cdd624fdc402d67dca8aca3a))
+
+
+### Dependencies
+
+* bump the dev-dependencies group with 2 updates ([#60](https://github.com/4cloudguru/pipeline-task-core/issues/60)) ([9f24a37](https://github.com/4cloudguru/pipeline-task-core/commit/9f24a37bd8871ad3477e2a28d82d10a51530abc3))
+* bump the github-actions-dependencies group with 3 updates ([#61](https://github.com/4cloudguru/pipeline-task-core/issues/61)) ([23dff25](https://github.com/4cloudguru/pipeline-task-core/commit/23dff25269f41ac4ab48343cc6dc574b925f7524))
+
 ## [0.7.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.6.3...v0.7.0) (2026-08-24)
 
 

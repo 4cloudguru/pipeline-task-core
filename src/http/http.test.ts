@@ -197,6 +197,18 @@ describe('http — githubAssetRedirects (opt-in)', () => {
     ['github.com', 'https://githubusercontent.com.evil.test/a', false, 'target suffix-extension'],
     ['github.com', 'https://evilgithubusercontent.com/a', false, 'target needs the separating dot'],
     ['github.com', 'https://elsewhere.test/a', false, 'unrelated target'],
+    [
+      'github.com',
+      'https://raw.githubusercontent.com/o/r/main/f',
+      false,
+      'raw content host is not a release-asset CDN',
+    ],
+    [
+      'github.com',
+      'https://gist.githubusercontent.com/u/id/raw/f',
+      false,
+      'gist content host is not a release-asset CDN',
+    ],
   ])('%s -> %s = %s (%s)', (origin, next, expected) => {
     expect(githubAssetRedirects(origin, new URL(next))).toBe(expected)
   })

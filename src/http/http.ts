@@ -94,7 +94,10 @@ export const sameHostOnly: RedirectPolicy = (originHost, next) => next.host === 
  * gist.githubusercontent.com, both of which serve attacker-authored file
  * content from any public repo or gist, not GitHub-issued release assets.
  */
-const GITHUB_ASSET_CDN_HOSTS = new Set(['objects.githubusercontent.com', 'release-assets.githubusercontent.com'])
+const GITHUB_ASSET_CDN_HOSTS = new Set([
+  'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com',
+])
 
 export const githubAssetRedirects: RedirectPolicy = (originHost, next) =>
   (originHost === 'github.com' || originHost === 'www.github.com') &&

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.7.1...v0.7.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* **security:** narrow githubAssetRedirects to GitHub's actual named asset CDN hosts ([#66](https://github.com/4cloudguru/pipeline-task-core/issues/66)) ([f4059f0](https://github.com/4cloudguru/pipeline-task-core/commit/f4059f06f3f7727ce5088cfc452fe4a239e0739f))
+
 ## [0.7.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.7.0...v0.7.1) (2026-08-24)
 
 

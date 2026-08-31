@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.7.2...v0.8.0) (2026-08-31)
+
+
+### Features
+
+* **ci:** adopt the shared Dependabot CI-health check ([#70](https://github.com/4cloudguru/pipeline-task-core/issues/70)) ([85b950f](https://github.com/4cloudguru/pipeline-task-core/commit/85b950f2bd4c301877c9521edec5751972595d5b))
+
 ## [0.7.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.7.1...v0.7.2) (2026-08-31)
 
 

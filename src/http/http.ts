@@ -88,13 +88,21 @@ export const sameHostOnly: RedirectPolicy = (originHost, next) => next.host === 
  * releases.hashicorp.com must not enable it.
  *
  * The redirect must have been issued by the TLS-authenticated github.com
- * origin, must stay https, and must land under githubusercontent.com. Matching
- * the suffix rather than a fixed label survives GitHub rotating the CDN name.
+ * origin, must stay https, and must land on one of GitHub's own named asset
+ * CDN hosts. An explicit set, not a `.githubusercontent.com` suffix test:
+ * that suffix also matches raw.githubusercontent.com and
+ * gist.githubusercontent.com, both of which serve attacker-authored file
+ * content from any public repo or gist, not GitHub-issued release assets.
  */
+const GITHUB_ASSET_CDN_HOSTS = new Set([
+  'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com',
+])
+
 export const githubAssetRedirects: RedirectPolicy = (originHost, next) =>
   (originHost === 'github.com' || originHost === 'www.github.com') &&
   next.protocol === 'https:' &&
-  next.host.endsWith('.githubusercontent.com')
+  GITHUB_ASSET_CDN_HOSTS.has(next.host)
 
 /** Permits a hop that ANY of `policies` accepts. With none supplied, every hop is refused. */
 export function anyRedirectPolicy(...policies: readonly RedirectPolicy[]): RedirectPolicy {

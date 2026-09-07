@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.8.0...v0.9.0) (2026-09-07)
+
+
+### Features
+
+* **url:** assertPlainUrlBase guards an operator-supplied URL that a path is appended to ([#78](https://github.com/4cloudguru/pipeline-task-core/issues/78)) ([7207d1e](https://github.com/4cloudguru/pipeline-task-core/commit/7207d1ef4f646fdfdc272f4cb6cd8f15d834394e))
+
 ## [0.8.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.7.2...v0.8.0) (2026-08-31)
 
 

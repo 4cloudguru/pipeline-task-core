@@ -61,6 +61,8 @@ export {
   truncateForLog,
 } from './url/redaction'
 export { validateUrlPathSegment } from './url/path-segment'
+export { assertPlainUrlBase } from './url/base'
+export type { UrlBaseUserinfoPolicy } from './url/base'
 export { resolveEnvProxy, resolveProxy } from './proxy/proxy'
 export type { AgentProxyConfiguration, ProxyEnvironment, ResolvedProxy } from './proxy/proxy'
 export { createProxyTunnelAgent } from './proxy/tunnel-agent'

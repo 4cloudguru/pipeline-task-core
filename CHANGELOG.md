@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.9.0...v0.9.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* **https:** verify certificates by default instead of inheriting NODE_TLS_REJECT_UNAUTHORIZED ([#82](https://github.com/4cloudguru/pipeline-task-core/issues/82)) ([8e940e7](https://github.com/4cloudguru/pipeline-task-core/commit/8e940e7cdd38181427b575a2ce0a763be83d3374))
+
 ## [0.9.0](https://github.com/4cloudguru/pipeline-task-core/compare/v0.8.0...v0.9.0) (2026-09-07)
 
 

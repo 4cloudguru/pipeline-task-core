@@ -135,14 +135,10 @@ class ProxyTunnelAgent extends https.Agent {
           socket,
           servername: net.isIP(sniName) ? undefined : sniName,
         }
-        // Only set rejectUnauthorized when the caller passed an explicit value.
-        // Node's own TLS layer treats an explicitly-present `undefined` key
-        // differently from an absent one: an absent key falls back to the
-        // NODE_TLS_REJECT_UNAUTHORIZED env var (matching the non-proxied
-        // https.request default path), while an explicit `undefined` does not.
-        if (options.rejectUnauthorized !== undefined) {
-          tlsOptions.rejectUnauthorized = options.rejectUnauthorized
-        }
+        // Written explicitly, defaulting to true: an absent key would fall back
+        // to the process-wide NODE_TLS_REJECT_UNAUTHORIZED, which a tunnelled
+        // request carrying a credential must not inherit (see HttpsRequestOptions).
+        tlsOptions.rejectUnauthorized = options.rejectUnauthorized ?? true
         tlsSocket = tls.connect(tlsOptions)
         tlsSocket.once('secureConnect', () => settle(null, tlsSocket))
         tlsSocket.once('error', (err) => settle(err))

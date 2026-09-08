@@ -67,10 +67,13 @@ export interface HttpsRequestOptions {
   body?: Buffer | undefined
   timeoutMs?: number | undefined
   /**
-   * Passed through only when explicitly supplied. Node's TLS layer treats an
-   * absent key differently from a present `undefined` one — absent falls back
-   * to `NODE_TLS_REJECT_UNAUTHORIZED` — so a caller that never mentions TLS
-   * verification must not have a value invented for it here.
+   * Certificate verification. Defaults to `true` -- and the default is written
+   * into the request, not left to Node: an absent key falls back to the
+   * process-wide `NODE_TLS_REJECT_UNAUTHORIZED`, so on an agent where that is
+   * `0` (machine-wide, or set by an unrelated job) a request carrying a bearer
+   * token would silently stop verifying the server. A caller that has a reason
+   * to skip verification (a private CA it cannot trust) passes `false`
+   * explicitly (azure-pipelines-terraform#1106 finding 4).
    */
   rejectUnauthorized?: boolean | undefined
   /**
@@ -125,9 +128,7 @@ export function httpsRequest(options: HttpsRequestOptions): Promise<HttpsRespons
       headers,
       agent: options.agent,
     }
-    if (options.rejectUnauthorized !== undefined) {
-      requestOptions.rejectUnauthorized = options.rejectUnauthorized
-    }
+    requestOptions.rejectUnauthorized = options.rejectUnauthorized ?? true
 
     const req = https.request(requestOptions, (res) => {
       const chunks: Buffer[] = []

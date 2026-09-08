@@ -27,6 +27,12 @@ export {
 } from './egress/egress'
 export type { EgressHostMessages } from './egress/egress'
 export {
+  TlsOptOutDestinationError,
+  assertTlsOptOutDestinationIsPrivate,
+  normalizeDestinationHost,
+} from './egress/tls-opt-out'
+export type { TlsOptOutRejection } from './egress/tls-opt-out'
+export {
   DOWNLOAD_TIMEOUT_MS,
   HttpError,
   MAX_REDIRECTS,

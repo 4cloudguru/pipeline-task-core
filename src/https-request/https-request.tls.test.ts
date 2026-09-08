@@ -7,9 +7,13 @@
  * machine-wide, or by an unrelated job in the same process) every request this
  * transport makes would silently stop verifying the server -- including the
  * ones carrying an OAuth secret, a bearer token or a Basic password
- * (azure-pipelines-terraform#1106 finding 4). The tests below hold the default
- * to `true` against that switch, and keep the explicit opt-out working for the
- * private-CA case that motivates it.
+ * (azure-pipelines-terraform#1106 finding 4).
+ *
+ * The two ends are asserted behaviourally, against a real loopback server
+ * presenting an untrusted certificate; the middle by inspecting the options
+ * handed to `https.request`. Node consults the process switch only when the key
+ * is absent, so its presence is the property -- and asserting it this way does
+ * not require turning verification off inside the test runner's own process.
  */
 import * as https from 'node:https'
 import { type AddressInfo } from 'node:net'
@@ -19,15 +23,8 @@ import { httpsRequest } from './https-request'
 import { TLS_CERT, TLS_KEY } from './loopback-tls.fixture'
 
 const servers: https.Server[] = []
-let savedSwitch: string | undefined
 
 afterEach(async () => {
-  if (savedSwitch === undefined) {
-    delete process.env['NODE_TLS_REJECT_UNAUTHORIZED']
-  } else {
-    process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = savedSwitch
-  }
-  savedSwitch = undefined
   await Promise.all(
     servers
       .splice(0)
@@ -46,9 +43,25 @@ async function untrustedServer(): Promise<URL> {
   return new URL(`https://127.0.0.1:${(server.address() as AddressInfo).port}/x`)
 }
 
-function disableVerificationProcessWide(): void {
-  savedSwitch = process.env['NODE_TLS_REJECT_UNAUTHORIZED']
-  process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'
+/**
+ * An agent that records the options it is asked to connect with.
+ *
+ * Node merges the request options into the ones it hands the agent, so this
+ * sees `rejectUnauthorized` exactly as the TLS layer will. It is the half of
+ * the property a test can ask about without turning verification off inside the
+ * runner's own process, where it would stay off for whatever runs next: Node
+ * consults `NODE_TLS_REJECT_UNAUTHORIZED` only when the key is ABSENT, so the
+ * key being present and `true` is what makes the switch irrelevant.
+ */
+class RecordingAgent extends https.Agent {
+  readonly seen: https.AgentOptions[] = []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Node types createConnection loosely
+  override createConnection(options: any, callback: any): any {
+    this.seen.push(options as https.AgentOptions)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (https.Agent.prototype as any).createConnection.call(this, options, callback)
+  }
 }
 
 describe('httpsRequest: certificate verification', () => {
@@ -57,15 +70,23 @@ describe('httpsRequest: certificate verification', () => {
     await expect(httpsRequest({ method: 'GET', url })).rejects.toThrow(/self.signed|certificate/i)
   })
 
-  it('still refuses it when NODE_TLS_REJECT_UNAUTHORIZED=0 is set process-wide', async () => {
+  it('writes the decision into the request rather than leaving it to the process switch', async () => {
     const url = await untrustedServer()
-    disableVerificationProcessWide()
-    await expect(httpsRequest({ method: 'GET', url })).rejects.toThrow(/self.signed|certificate/i)
+    const agent = new RecordingAgent()
+    await expect(httpsRequest({ method: 'GET', url, agent })).rejects.toThrow(
+      /self.signed|certificate/i,
+    )
+    // Present, not merely truthy: an absent key is what makes Node consult
+    // NODE_TLS_REJECT_UNAUTHORIZED, so its presence IS the fix.
+    expect(Object.hasOwn(agent.seen[0] ?? {}, 'rejectUnauthorized')).toBe(true)
+    expect(agent.seen[0]?.rejectUnauthorized).toBe(true)
   })
 
   it('honours an explicit opt-out, which is how a private CA is reached', async () => {
     const url = await untrustedServer()
-    const response = await httpsRequest({ method: 'GET', url, rejectUnauthorized: false })
+    const agent = new RecordingAgent()
+    const response = await httpsRequest({ method: 'GET', url, rejectUnauthorized: false, agent })
     expect(response.status).toBe(200)
+    expect(agent.seen[0]?.rejectUnauthorized).toBe(false)
   })
 })

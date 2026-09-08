@@ -74,7 +74,6 @@ describe('assertTlsOptOutDestinationIsPrivate — accepted destinations', () => 
     ['name that resolves privately', 'https://registry.internal/v1/modules'],
     ['ROOTED name that resolves privately', 'https://registry.internal./v1/modules'],
     ['name resolving into RFC1918 space', 'https://tsm.corp.example/v1/modules'],
-    ['name whose resolution includes a private address', 'https://split.example/v1/modules'],
   ])('accepts a %s', async (_label, url) => {
     await expect(
       assertTlsOptOutDestinationIsPrivate('registryUrl', url, lookup),
@@ -183,5 +182,51 @@ describe('assertTlsOptOutDestinationIsPrivate — failure modes', () => {
     } catch (error) {
       expect((error as TlsOptOutDestinationError).inputName).toBe('callbackUrl')
     }
+  })
+})
+
+describe('assertTlsOptOutDestinationIsPrivate: the answer must be private in FULL', () => {
+  it('refuses a split-horizon name whose answer is only PARTLY private (was accepted before)', async () => {
+    // The stub zone answers split.example with one public and one private
+    // address. This row used to live in the ACCEPTED table, which is precisely
+    // the hole: `some` was satisfied while the credential could still land on
+    // the public answer with verification disabled.
+    await expect(
+      assertTlsOptOutDestinationIsPrivate(
+        'registryUrl',
+        'https://split.example/v1/modules',
+        lookup,
+      ),
+    ).rejects.toThrow(TlsOptOutDestinationError)
+  })
+
+  const OK = 'https://registry.internal/'
+  it('refuses a name whose answer mixes a public address with a private one', async () => {
+    // The interception this guard exists to prevent: `some` would accept this,
+    // and the credential can still land on 93.184.216.34 with verification off.
+    const lookup = async () => [{ address: '93.184.216.34' }, { address: '10.0.0.7' }]
+    await expect(assertTlsOptOutDestinationIsPrivate('registryUrl', OK, lookup)).rejects.toThrow(
+      TlsOptOutDestinationError,
+    )
+  })
+
+  it('refuses the same answer in the other order, so the check is not first-address-wins', async () => {
+    const lookup = async () => [{ address: '10.0.0.7' }, { address: '93.184.216.34' }]
+    await expect(assertTlsOptOutDestinationIsPrivate('registryUrl', OK, lookup)).rejects.toThrow(
+      TlsOptOutDestinationError,
+    )
+  })
+
+  it('refuses an empty answer: nothing was proved private', async () => {
+    await expect(
+      assertTlsOptOutDestinationIsPrivate('registryUrl', OK, async () => []),
+    ).rejects.toThrow(TlsOptOutDestinationError)
+  })
+
+  it('still accepts an answer that is private throughout, including a dual-stack one', async () => {
+    const lookup = async () => [{ address: '10.0.0.7' }, { address: 'fd00::1' }]
+    await expect(
+      assertTlsOptOutDestinationIsPrivate('registryUrl', OK, lookup),
+    ).resolves.toBeUndefined()
   })
 })

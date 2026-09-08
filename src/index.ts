@@ -24,6 +24,7 @@ export {
   parseIpv4,
   parseIpv6,
   resolvesToPrivateOrLinkLocalAddress,
+  resolvesOnlyToPrivateOrLinkLocalAddresses,
 } from './egress/egress'
 export type { EgressHostMessages } from './egress/egress'
 export {

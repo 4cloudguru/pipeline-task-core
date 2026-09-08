@@ -324,6 +324,36 @@ export async function resolvesToPrivateOrLinkLocalAddress(
   return addresses.some((a) => isPrivateOrLinkLocalHost(a.address))
 }
 
+/**
+ * True when the host resolves to at least one address and EVERY one of them is
+ * private/link-local/reserved.
+ *
+ * The `some` predicate above and this `every` one are not variants of a
+ * preference — they answer opposite questions, and using the wrong one is a
+ * live hole rather than a style choice:
+ *
+ *  - a DENY decision ("refuse to reach this destination") asks whether ANY
+ *    answer is private, because one private address is enough to make the
+ *    request an SSRF;
+ *  - an ALLOW decision ("this destination is internal, so honouring the
+ *    operator's request to stop verifying its certificate is defensible") asks
+ *    whether ALL of them are, because a single public address in the answer is
+ *    where the credential actually lands.
+ *
+ * A name answering `93.184.216.34` and `10.0.0.7` satisfies `some` while the
+ * connection may be made to the public address with verification disabled,
+ * which is exactly the on-path interception the opt-out guard exists to
+ * prevent. An empty answer is not private by default — nothing was proved.
+ */
+export async function resolvesOnlyToPrivateOrLinkLocalAddresses(
+  hostname: string,
+  lookup: (host: string) => Promise<{ address: string }[]> = (host) =>
+    dnsPromises.lookup(host, { all: true }),
+): Promise<boolean> {
+  const addresses = await lookup(bareHost(hostname))
+  return addresses.length > 0 && addresses.every((a) => isPrivateOrLinkLocalHost(a.address))
+}
+
 /** Caller-supplied rejection text, so each call site keeps its own wording. */
 export interface EgressHostMessages {
   /** Host is not in the operator's explicit allowlist. */

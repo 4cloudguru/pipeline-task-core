@@ -25,7 +25,7 @@ import { stripControlCharacters, redactUrlUserInfo } from '../url/redaction'
 import {
   isIpLiteral,
   isPrivateOrLinkLocalHost,
-  resolvesToPrivateOrLinkLocalAddress,
+  resolvesOnlyToPrivateOrLinkLocalAddresses,
 } from './egress'
 
 /** Why a TLS-verification opt-out was refused. */
@@ -101,7 +101,12 @@ function describeUnparseable(value: string): string {
  *  - an IP literal is accepted only when it is private/link-local/reserved, in
  *    any spelling `isPrivateOrLinkLocalHost` understands (`127.1`, `0x7f000001`
  *    and `[::ffff:127.0.0.1]` all reach loopback);
- *  - any other name must RESOLVE to a private/link-local address.
+ *  - any other name must resolve to at least one address, and EVERY address it
+ *    resolves to must be private/link-local. `some` would be the wrong
+ *    predicate here: a name answering one public and one private address is a
+ *    destination whose credential can still land on the public one with
+ *    verification disabled, which is the interception this guard exists to
+ *    prevent.
  *
  * A DNS lookup failure is deliberately not caught: it propagates as its own
  * accurate error, which still fails the caller closed, rather than being
@@ -132,7 +137,7 @@ export async function assertTlsOptOutDestinationIsPrivate(
   if (isIpLiteral(host)) {
     throw new TlsOptOutDestinationError(inputName, 'not-private', host)
   }
-  if (!(await resolvesToPrivateOrLinkLocalAddress(host, lookup))) {
+  if (!(await resolvesOnlyToPrivateOrLinkLocalAddresses(host, lookup))) {
     throw new TlsOptOutDestinationError(inputName, 'not-private', host)
   }
 }

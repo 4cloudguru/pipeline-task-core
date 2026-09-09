@@ -12,6 +12,7 @@ import {
   parseIpv4,
   parseIpv6,
   resolvesToPrivateOrLinkLocalAddress,
+  resolvesOnlyToPrivateOrLinkLocalAddresses,
 } from './egress'
 
 /**
@@ -307,6 +308,8 @@ describe('Table B — exported surface is fully accounted for', () => {
     isPrivateOrLinkLocalHost: 'numeric classification of a literal; no DNS',
     isIpLiteral: 'decides whether DNS resolution is meaningful',
     resolvesToPrivateOrLinkLocalAddress: 'check-time DNS; explicitly NOT a rebinding defence',
+    resolvesOnlyToPrivateOrLinkLocalAddresses:
+      'the ALLOW-direction twin: every answer must be private, and an empty answer proves nothing',
     assertEgressHostAllowed: 'THE decision point; throws, never returns a bare boolean',
   }
 

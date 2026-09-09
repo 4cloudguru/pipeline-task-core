@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/4cloudguru/pipeline-task-core/compare/v0.9.2...v0.9.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **publish:** gate the publish audit on what ships, not on the dev tree ([#87](https://github.com/4cloudguru/pipeline-task-core/issues/87)) ([e674ab2](https://github.com/4cloudguru/pipeline-task-core/commit/e674ab2055223325f3165c6dea88e0ded2a6077d))
+
 ## [0.9.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.9.1...v0.9.2) (2026-09-09)
 
 

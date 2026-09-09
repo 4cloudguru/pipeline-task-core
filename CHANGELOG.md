@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/4cloudguru/pipeline-task-core/compare/v0.9.1...v0.9.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* **egress:** honour a TLS-verification opt-out only against a provably private destination ([#84](https://github.com/4cloudguru/pipeline-task-core/issues/84)) ([ab3e227](https://github.com/4cloudguru/pipeline-task-core/commit/ab3e22770e9316424a710b532aae3035ab2bcda0))
+
 ## [0.9.1](https://github.com/4cloudguru/pipeline-task-core/compare/v0.9.0...v0.9.1) (2026-09-08)
 
 

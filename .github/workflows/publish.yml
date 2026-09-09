@@ -84,7 +84,29 @@ jobs:
 
       # Re-run at publish time so a dispatch re-publish of an older tag cannot ship without a
       # fresh advisory/signature check.
-      - run: npm audit --audit-level=moderate
+      #
+      # Scoped to what a consumer actually installs. This package declares no runtime
+      # dependencies and ships `files: [dist]`, so nothing in the dev tree can reach a
+      # consumer through the tarball. `--audit-level=moderate` keeps this gate stricter
+      # than CI's production audit, which blocks only at `high`.
+      - run: npm audit --omit=dev --audit-level=moderate
+
+      # The dev tree is reported, never blocking, and deliberately without
+      # `continue-on-error` -- that would rewrite the step's conclusion to success and hide
+      # the result, since only `outcome` records the truth and the API does not expose it.
+      #
+      # Blocking here deadlocks a release permanently. A tag's lockfile is frozen while this
+      # audit reads the live advisory database, so an advisory published after the tag was
+      # cut can never be fixed on that tag, and the version can never be shipped. That is
+      # what stranded v0.9.2: js-yaml, reached only through commitlint -> cosmiconfig, marked
+      # dev in the lockfile, present in nothing that ships. Dependabot fixes these on main,
+      # which is the only place the fix can land.
+      - name: Report dev-tree advisories (informational)
+        run: |
+          if ! npm audit --audit-level=moderate; then
+            echo "::warning::Advisories present in the dev dependency tree. They ship in nothing (no runtime dependencies, files: [dist]) and cannot be fixed on a cut tag -- fix them on main."
+          fi
+
       - run: npm audit signatures
 
       - name: Assert the CJS entrypoint is really CommonJS

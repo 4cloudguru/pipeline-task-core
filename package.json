@@ -82,12 +82,12 @@
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@types/node": "^20.19.0",
-    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/coverage-v8": "^5.0.0",
     "nock": "^14.0.17",
     "openpgp": "^6.3.1",
     "prettier": "3.9.6",
     "tsup": "^8.3.5",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.7"
+    "vitest": "^5.0.0"
   }
 }

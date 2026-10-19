@@ -83,9 +83,9 @@
     "@commitlint/config-conventional": "^21.2.0",
     "@types/node": "^24",
     "@vitest/coverage-v8": "^5.0.0",
-    "nock": "^14.0.17",
+    "nock": "^15.0.1",
     "openpgp": "^6.3.1",
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "tsup": "^8.3.5",
     "typescript": "^5.9.3",
     "vitest": "^5.0.0"

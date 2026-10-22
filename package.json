@@ -85,8 +85,8 @@
     "@vitest/coverage-v8": "^5.0.0",
     "nock": "^14.0.17",
     "openpgp": "^6.3.1",
-    "prettier": "3.9.9",
-    "tsup": "^8.3.5",
+    "prettier": "3.9.10",
+    "tsup": "^9.0.0",
     "typescript": "^5.9.3",
     "vitest": "^5.0.0"
   }

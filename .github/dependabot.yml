@@ -46,5 +46,12 @@ updates:
       # agent — the CI matrix catches that only if a test exercises the API.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # nock 15 cannot run on the Node FLOOR (20) the test matrix covers: its
+      # @mswjs/interceptors 0.44 transport calls Promise.withResolvers, which
+      # Node 20 lacks, so every intercepted request throws there (#107, 7 of
+      # 516 tests). It also drops `this.req` from reply callbacks, which the
+      # https-request tests read. Revisit when the floor moves to Node 22.
+      - dependency-name: "nock"
+        update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7

@@ -222,7 +222,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         # DO NOT drop this `with:` block. `advanced-security` defaults to TRUE,
         # which selects --format=sarif -- and there zizmor EXITS 0 WHATEVER IT
         # FINDS. The job goes green and the findings arrive as code-scanning
@@ -251,6 +251,6 @@ jobs:
   # shared-workflows at that commit, so this repo cannot weaken its own gate by
   # editing a local copy -- there is no local copy.
   workflow-hardening:
-    uses: 4cloudguru/shared-workflows/.github/workflows/workflow-hardening.yml@2c1ffdbaab2a55eb273b9a9e7cb4864e4e0a02c8 # v1.29.1
+    uses: 4cloudguru/shared-workflows/.github/workflows/workflow-hardening.yml@a1fdc796956444af6c184c0784e1b033637888e9 # v1.29.3
     with:
       script-ref: 2c1ffdbaab2a55eb273b9a9e7cb4864e4e0a02c8
